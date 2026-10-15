@@ -2409,7 +2409,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "1.0";
+const APP_VERSION = "1.1";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -3132,7 +3132,7 @@ const DRINK_DEFAULTS = {
   lightMax: 2, fullMin: 3,
 };
 const WEIGHT_DEFAULTS = { mode: "off", goal: null, start: null, baseline: null, baselineDate: null, band: 1 };
-const DRINK_COLORS = { none: "#a3e635", light: "#fb923c", full: "#f43f5e" };
+const DRINK_COLORS = { none: "#a3e635", light: "#fb923c", full: "#4c7dff" };
 const DRINK_NAMES = { none: "ZERO", light: "LIGHT", full: "FULL" };
 const WCOL = { dot: "#c8a8e8", avg: "#e8f84a", trend: "#fb923c", goal: "#a3e635", over: "#f43f5e", under: "#fb923c" };
 
@@ -3186,7 +3186,7 @@ function weightAvg(iso) {
   return v.length ? { avg: v.reduce((a, b) => a + b, 0) / v.length, n: v.length } : null;
 }
 // Least-squares line through weigh-ins in the window ending on `endISO`.
-// x = days since window start. Needs 5+ weigh-ins spanning a week.
+// x = days since window start. Needs 8+ weigh-ins spanning 14+ days.
 function weightTrend(endISO, windowDays = 28) {
   const startISO = addDaysISO(endISO, -(windowDays - 1));
   const pts = [];
@@ -3194,7 +3194,7 @@ function weightTrend(endISO, windowDays = 28) {
     const w = daily.weights[addDaysISO(startISO, x)];
     if (typeof w === "number") pts.push([x, w]);
   }
-  if (pts.length < 5 || pts[pts.length - 1][0] - pts[0][0] < 7) return null;
+  if (pts.length < 8 || pts[pts.length - 1][0] - pts[0][0] < 14) return null;   // too early to trust
   const n = pts.length;
   const mx = pts.reduce((a, p) => a + p[0], 0) / n, my = pts.reduce((a, p) => a + p[1], 0) / n;
   let sxy = 0, sxx = 0;
@@ -3237,7 +3237,8 @@ function weightStatus() {
       out.progress = start === s.goal ? 1 : Math.max(0, Math.min(1, (start - cur.avg) / (start - s.goal)));
       out.reached = out.toGo <= 0;
       const rate = out.trend ? -out.trend.perWeek * dir : null;   // kg/wk towards goal
-      if (!out.reached && rate && rate > 0.05) out.eta = addDaysISO(t, Math.round(out.toGo / rate * 7));
+      const r = rate ? Math.min(rate, 1) : null;    // early weeks are mostly water: cap at 1 kg/wk
+      if (!out.reached && r && r > 0.05) out.eta = addDaysISO(t, Math.round(out.toGo / r * 7));
     }
   }
   return out;
@@ -3333,15 +3334,18 @@ function renderWeightGauge(ws) {
 }
 
 function renderWeightChart(days, compact) {
-  const t = todayISO(), from = addDaysISO(t, -(days - 1)), s = daily.wset;
+  const t = todayISO(), s = daily.wset;
+  const rangeStart = addDaysISO(t, -(days - 1));
+  const first = Object.keys(daily.weights).filter(k => k >= rangeStart && k <= t).sort()[0];
+  const from = first || rangeStart;            // start at the first weigh-in in range
   const pts = Object.keys(daily.weights).filter(k => k >= from && k <= t).sort().map(k => [k, daily.weights[k]]);
   if (!pts.length) return compact ? "" : `<div class="w-empty">Log a weigh-in to start the chart</div>`;
   const avg = pts.map(([k]) => [k, weightAvg(k).avg]);
   const tr = weightTrend(t);
-  const ext = compact ? 0 : 14;                       // project the trend 2 weeks ahead
+  const ext = compact || !tr ? 0 : 14;                // project the trend 2 weeks ahead
   const end = addDaysISO(t, ext);
   const W = 440, H = compact ? 130 : 230, pl = 32, pr = 8, pt = 8, pb = compact ? 6 : 20;
-  const total = Math.max(1, days - 1 + ext);
+  const total = Math.max(1, daysBetweenISO(from, t) + ext);
   const X = d => pl + daysBetweenISO(from, d) / total * (W - pl - pr);
 
   let ys = pts.map(p => p[1]).concat(avg.map(a => a[1]));
@@ -3383,7 +3387,7 @@ function renderWeightChart(days, compact) {
   }
   const svg = `<svg class="w-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Weight chart">${g}${ref}${dots}${line}${trend}${xl}</svg>`;
   if (compact) return svg;
-  let leg = `<span><i class="dot" style="background:${WCOL.dot}"></i>DAILY</span><span><i style="border-color:${WCOL.avg}"></i>7-DAY AVG</span><span><i class="dash" style="border-color:${WCOL.trend}"></i>TREND</span>`;
+  let leg = `<span><i class="dot" style="background:${WCOL.dot}"></i>DAILY</span><span><i style="border-color:${WCOL.avg}"></i>7-DAY AVG</span>${tr ? `<span><i class="dash" style="border-color:${WCOL.trend}"></i>TREND</span>` : ""}`;
   if (s.mode === "goal" && typeof s.goal === "number") leg += `<span><i class="dash" style="border-color:${WCOL.goal}"></i>GOAL</span>`;
   if (s.mode === "maintain" && typeof s.baseline === "number") leg += `<span><i class="band" style="background:rgba(163,230,53,0.3)"></i>±${fmtKg(s.band)} BAND</span>`;
   return svg + `<div class="w-legend">${leg}</div>`;
@@ -3633,8 +3637,10 @@ function renderWeightView() {
 // ---- view switch ----
 function renderTrainSubtabs() {
   return `<div class="range-toggle train-sub">
-    <button class="range-btn ${state.view === "log" ? "active" : ""}" data-view="log">LOG SESSION</button>
+    <button class="range-btn ${state.view === "log" ? "active" : ""}" data-view="log">LOG</button>
     <button class="range-btn ${state.view === "history" ? "active" : ""}" data-view="history">HISTORY</button>
+    <button class="range-btn" id="openWorkouts">WORKOUT</button>
+    <button class="range-btn" id="openStretch">STRETCH</button>
   </div>`;
 }
 function renderMainView() {
@@ -4005,17 +4011,15 @@ function render() {
           <span class="title-meta">${new Date().toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" })} &nbsp;<span style="opacity:0.5;">v${APP_VERSION}</span></span>
         </div>
         <div class="title-actions">
-          <button class="menu-btn" id="openWorkouts" aria-label="Workouts">🏋️</button>
-          <button class="menu-btn" id="openStretch" aria-label="Stretch">🧘</button>
           <button class="menu-btn" id="openMenu" aria-label="Menu">⋯</button>
         </div>
       </div>
       <div class="tabs" role="tablist">
         <button class="tab ${state.view === "today" ? "active" : ""}" data-view="today" role="tab">TODAY</button>
         <button class="tab ${state.view === "log" || state.view === "history" ? "active" : ""}" data-view="log" role="tab">TRAIN</button>
+        <button class="tab ${state.view === "todo" ? "active" : ""}" data-view="todo" role="tab">TO DO</button>
         <button class="tab ${state.view === "drink" ? "active" : ""}" data-view="drink" role="tab">DRINK</button>
         <button class="tab ${state.view === "weight" ? "active" : ""}" data-view="weight" role="tab">WEIGHT</button>
-        <button class="tab ${state.view === "todo" ? "active" : ""}" data-view="todo" role="tab">TO DO</button>
       </div>
     </div>
     ${renderWeightBanner()}
