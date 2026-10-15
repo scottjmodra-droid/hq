@@ -1,0 +1,5 @@
+# Tell browsers (and home-screen webapps) to always re-check for a new
+# version of the HTML before serving the cached copy. Without this iOS
+# can serve a months-old cached page from an Add-to-Home-Screen app.
+/*
+  Cache-Control: public, max-age=0, must-revalidate
