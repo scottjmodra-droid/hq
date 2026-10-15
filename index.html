@@ -2087,7 +2087,25 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
 .td-quick { display: flex; gap: 6px; margin-top: 10px; }
 .td-quick .input { flex: 1; min-width: 0; }
 .td-quick .w-save { min-width: 50px; font-size: 22px; }
-.tab { letter-spacing: 1.5px; font-size: 13px; }
+/* v1.2: compact date header + main tabs that stand apart from the sub-tabs */
+.header { padding-top: calc(8px + env(safe-area-inset-top)); padding-bottom: 12px; border-bottom: none; }
+.header .title { margin-bottom: 8px; }
+.title-date { font-family: 'Bebas Neue', sans-serif; font-size: 17px; letter-spacing: 2.5px; color: #d4baeb; }
+.header .menu-btn { font-size: 20px; padding: 2px 8px; }
+.header .tabs {
+  gap: 4px; padding: 5px; border-radius: 14px;
+  background: linear-gradient(180deg, rgba(139,92,246,0.38), rgba(109,40,217,0.30));
+  box-shadow: 0 0 0 1px rgba(196,160,255,0.28) inset, 0 8px 24px rgba(0,0,0,0.30);
+}
+.header .tab {
+  flex: 1 1 0; min-width: 0; white-space: nowrap; padding: 13px 0 11px; border: none; border-radius: 10px;
+  font-size: 16px; letter-spacing: 1px; color: #eadcff; background: transparent;
+}
+.header .tab.active {
+  background: #8b5cf6; color: #fff; border-bottom: none;
+  box-shadow: 0 4px 14px rgba(139,92,246,0.55), 0 0 0 1px rgba(255,255,255,0.18) inset;
+}
+.menu-ver { text-align: center; font-size: 12px; color: #9684b8; padding: 6px 0 2px; }
 </style>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -2105,6 +2123,7 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
     <button class="menu-item" id="exportCsvBtn"><span class="menu-icon">📊</span>Export as CSV</button>
     <button class="menu-item danger" id="clearBtn"><span class="menu-icon">🗑</span>Clear all data</button>
     <button class="menu-item" id="closeMenuBtn" style="color:#666; justify-content:center;">Cancel</button>
+    <div class="menu-ver" id="menuVer"></div>
   </div>
 </div>
 <audio id="iosUnmuteHack" preload="auto" loop playsinline src="data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV/zQsQbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV"></audio>
@@ -2409,7 +2428,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "1.1";
+const APP_VERSION = "1.2";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -4007,8 +4026,7 @@ function render() {
     <div class="header">
       <div class="title">
         <div class="title-left">
-          <span class="title-name">HQ</span>
-          <span class="title-meta">${new Date().toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" })} &nbsp;<span style="opacity:0.5;">v${APP_VERSION}</span></span>
+          <span class="title-date">${new Date().toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" }).toUpperCase()}</span>
         </div>
         <div class="title-actions">
           <button class="menu-btn" id="openMenu" aria-label="Menu">⋯</button>
@@ -5734,6 +5752,7 @@ function attachHandlers() {
   const openMenu = document.getElementById("openMenu");
   if (openMenu) openMenu.addEventListener("click", () => {
     document.getElementById("weightDisplay").textContent = state.weight + "kg";
+    document.getElementById("menuVer").textContent = "HQ v" + APP_VERSION;
     document.getElementById("menuSheet").classList.add("open");
   });
   // Workouts shortcut (⏱) — always opens to the list view.
