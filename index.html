@@ -2105,19 +2105,16 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
   background: #8b5cf6; color: #fff; border-bottom: none;
   box-shadow: 0 4px 14px rgba(139,92,246,0.55), 0 0 0 1px rgba(255,255,255,0.18) inset;
 }
-/* Workout / Stretch: launchers, not tabs */
-.launch-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 8px; margin: -6px 0 18px; }
+/* Workout / Stretch: small launch chips, not tabs */
+.launch-row { display: flex; justify-content: flex-end; gap: 6px; margin: -8px 0 14px; }
 .launch-btn {
-  display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 12px; min-width: 0; overflow: hidden;
-  background: linear-gradient(135deg, #2a0d52, #1a0633); border: 1px solid rgba(232,248,74,0.35);
-  color: #fff; font-family: 'Bebas Neue', sans-serif; letter-spacing: 1.5px; font-size: 17px; text-align: left;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+  display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px 4px; border-radius: 999px;
+  background: rgba(26,6,51,0.6); border: 1px solid rgba(232,248,74,0.35);
+  color: #eadcff; font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; font-size: 13px; white-space: nowrap;
 }
-.launch-btn:active { transform: translateY(1px); border-color: #e8f84a; }
-.launch-btn .li { font-size: 22px; line-height: 1; }
-.launch-btn .ll { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; }
-.launch-btn .lc, .launch-btn .li { flex-shrink: 0; }
-.launch-btn .lc { color: #e8f84a; font-size: 22px; line-height: 1; }
+.launch-btn:active { border-color: #e8f84a; color: #fff; }
+.launch-btn .li { font-size: 14px; line-height: 1; }
+.launch-btn .lc { color: #e8f84a; font-size: 15px; line-height: 1; }
 .menu-ver { text-align: center; font-size: 12px; color: #9684b8; padding: 6px 0 2px; }
 </style>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -2441,7 +2438,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "1.3";
+const APP_VERSION = "1.4";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
