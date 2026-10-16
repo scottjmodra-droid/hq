@@ -500,6 +500,10 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
   border-radius: 8px; display: flex; align-items: center; gap: 12px;
 }
 .menu-item:active { background: rgba(255,255,255,0.08); }
+.menu-sheet .menu-item { padding: 12px 14px; font-size: 15px; }
+.menu-chev { margin-left: auto; color: #9684b8; transition: transform 0.15s; }
+.menu-group { margin: 0 0 4px 14px; padding-left: 8px; border-left: 2px solid rgba(139,92,246,0.45); }
+.menu-group .menu-item { padding: 10px 12px; font-size: 14px; }
 .menu-item.danger { color: #ff5577; }
 .menu-item .menu-icon { font-size: 18px; width: 24px; text-align: center; }
 
@@ -2088,7 +2092,12 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
 .td-quick .input { flex: 1; min-width: 0; }
 .td-quick .w-save { min-width: 50px; font-size: 22px; }
 /* v1.2: compact date header + main tabs that stand apart from the sub-tabs */
-.header { padding-top: calc(8px + env(safe-area-inset-top)); padding-bottom: 12px; border-bottom: none; }
+.header {
+  padding-top: calc(8px + env(safe-area-inset-top)); padding-bottom: 12px; border-bottom: none;
+  position: sticky; top: 0; z-index: 60;
+  background: rgba(26,6,51,0.88); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  box-shadow: 0 10px 20px -12px rgba(0,0,0,0.6);
+}
 .header .title { margin-bottom: 8px; }
 .title-date { font-family: 'Bebas Neue', sans-serif; font-size: 17px; letter-spacing: 2.5px; color: #d4baeb; }
 .header .menu-btn { font-size: 20px; padding: 2px 8px; }
@@ -2115,6 +2124,12 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
 .launch-btn:active { border-color: #e8f84a; color: #fff; }
 .launch-btn .li { font-size: 14px; line-height: 1; }
 .launch-btn .lc { color: #e8f84a; font-size: 15px; line-height: 1; }
+/* Today cards: tappable titles, scrolling to-do list */
+.dcard-link { background: none; border: none; padding: 0; color: inherit; font: inherit; letter-spacing: inherit; display: inline-flex; align-items: center; gap: 6px; text-align: left; }
+.dcard-link i { font-style: normal; color: #e8f84a; font-size: 18px; line-height: 1; }
+.dcard-link:active { color: #fff; }
+.td-scroll { max-height: 272px; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.td-scroll.more { -webkit-mask-image: linear-gradient(180deg, #000 85%, transparent); mask-image: linear-gradient(180deg, #000 85%, transparent); padding-bottom: 18px; }
 .menu-ver { text-align: center; font-size: 12px; color: #9684b8; padding: 6px 0 2px; }
 </style>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -2126,12 +2141,15 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
     <div class="menu-handle"></div>
     <button class="menu-item" id="settingsBtn"><span class="menu-icon">⚙</span>Bodyweight <span id="weightDisplay" style="color:#666; margin-left:auto;"></span></button>
     <button class="menu-item" id="planBtn"><span class="menu-icon">📅</span>Training Plan</button>
-    <button class="menu-item" id="exportBtn"><span class="menu-icon">⬇</span>Export backup (JSON)</button>
-    <button class="menu-item" id="importBtn"><span class="menu-icon">⬆</span>Import backup (JSON)</button>
-    <button class="menu-item" id="importAppleBtn"><span class="menu-icon">⌚</span>Import from Apple Health</button>
-    <button class="menu-item" id="restoreBtn"><span class="menu-icon">🛟</span>Recent backups</button>
-    <button class="menu-item" id="exportCsvBtn"><span class="menu-icon">📊</span>Export as CSV</button>
-    <button class="menu-item danger" id="clearBtn"><span class="menu-icon">🗑</span>Clear all data</button>
+    <button class="menu-item" id="backupToggle" aria-expanded="false"><span class="menu-icon">💾</span>Backup &amp; data <span class="menu-chev" id="backupChev">▸</span></button>
+    <div class="menu-group" id="backupGroup" hidden>
+      <button class="menu-item" id="exportBtn"><span class="menu-icon">⬇</span>Export backup (JSON)</button>
+      <button class="menu-item" id="importBtn"><span class="menu-icon">⬆</span>Import backup (JSON)</button>
+      <button class="menu-item" id="importAppleBtn"><span class="menu-icon">⌚</span>Import from Apple Health</button>
+      <button class="menu-item" id="restoreBtn"><span class="menu-icon">🛟</span>Recent backups</button>
+      <button class="menu-item" id="exportCsvBtn"><span class="menu-icon">📊</span>Export as CSV</button>
+      <button class="menu-item danger" id="clearBtn"><span class="menu-icon">🗑</span>Clear all data</button>
+    </div>
     <button class="menu-item" id="closeMenuBtn" style="color:#666; justify-content:center;">Cancel</button>
     <div class="menu-ver" id="menuVer"></div>
   </div>
@@ -2438,7 +2456,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "1.4";
+const APP_VERSION = "1.6";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -3434,7 +3452,7 @@ function renderTodayWeightCard() {
   const dCls = wd == null ? "" : wd > 0.05 ? "up" : wd < -0.05 ? "down" : "";
   const dTxt = wd == null ? "–" : (wd > 0.05 ? "▲" : wd < -0.05 ? "▼" : "") + fmtKg(Math.abs(wd));
   return `<div class="dcard">
-    <div class="dcard-h"><span>⚖️ WEIGHT</span>${chip}</div>
+    <div class="dcard-h"><button class="dcard-link" data-view="weight">⚖️ WEIGHT<i>›</i></button>${chip}</div>
     <div class="w-entry">
       <input class="input w-input" id="wTodayInput" type="number" inputmode="decimal" step="0.1" min="30" max="250" placeholder="KG TODAY" value="${tw != null ? tw : ""}">
       <button class="w-save ${tw != null ? "done" : ""}" data-w-save-today>${tw != null ? "✓ SAVED" : "SAVE"}</button>
@@ -3445,7 +3463,6 @@ function renderTodayWeightCard() {
       <div class="w-stat"><div class="w-mid">${ws.trend ? fmtSigned(ws.trend.perWeek, 2) : "–"}</div><div class="w-lbl">KG/WK TREND</div></div>
     </div>
     ${renderWeightGauge(ws)}
-    ${renderWeightChart(30, true)}
   </div>`;
 }
 function sessionMinutes(s) { const m = parseFloat(s.data && s.data.duration); return isFinite(m) && m > 0 ? m : 0; }
@@ -3483,7 +3500,7 @@ function renderTodayTrainCard() {
       <div class="tw-lbl">${letters[i]}</div></div>`).join("");
   const hrs = (weekMin / 60).toFixed(1);
   return `<div class="dcard">
-    <div class="dcard-h"><span>🏋️ TRAIN TODAY</span><span class="r">${hrs} H THIS WEEK</span></div>
+    <div class="dcard-h"><button class="dcard-link" data-view="log">🏋️ TRAIN TODAY<i>›</i></button><span class="r">${hrs} H THIS WEEK</span></div>
     ${chips ? `<div class="plan-today-row">${chips}</div>` : `<div class="plan-rest">REST DAY</div>`}
     <div class="tw-week">${bars}</div>
     <button class="save-btn log-cta" data-view="log">+ LOG SESSION</button>
@@ -3492,7 +3509,7 @@ function renderTodayTrainCard() {
 function renderTodayDrinkCard() {
   const t = todayISO(), v = daily.drink[t], c = daily.counts[t];
   return `<div class="dcard">
-    <div class="dcard-h"><span>🍷 DRINK</span><span class="r">${v ? DRINK_NAMES[v] + (c && v !== "none" ? " · " + c : "") : "NOT LOGGED"}</span></div>
+    <div class="dcard-h"><button class="dcard-link" data-view="drink">🍷 DRINK<i>›</i></button><span class="r">${v ? DRINK_NAMES[v] + (c && v !== "none" ? " · " + c : "") : "NOT LOGGED"}</span></div>
     ${renderDrinkButtons(t)}
   </div>`;
 }
@@ -3939,8 +3956,8 @@ function renderTodayTodoCard() {
   const open = items.filter(i => !i.completed).length;
   const ordered = items.filter(i => !i.completed).concat(items.filter(i => i.completed));
   return `<div class="dcard">
-    <div class="dcard-h"><span>✅ TO DO TODAY</span><span class="r">${items.length ? `${items.length - open}/${items.length}` : ""}</span></div>
-    ${ordered.map(i => todoItemRow(i, "week")).join("")}
+    <div class="dcard-h"><button class="dcard-link" data-view="todo">✅ TO DO TODAY<i>›</i></button><span class="r">${items.length ? `${items.length - open}/${items.length}` : ""}</span></div>
+    ${ordered.length ? `<div class="td-scroll ${ordered.length > 5 ? "more" : ""}">${ordered.map(i => todoItemRow(i, "week")).join("")}</div>` : ""}
     <div class="td-quick"><input class="input" id="tdQuickInput" placeholder="Add for today…" autocomplete="off"><button class="w-save" data-td-quick>+</button></div>
   </div>`;
 }
@@ -5764,6 +5781,7 @@ function attachHandlers() {
   if (openMenu) openMenu.addEventListener("click", () => {
     document.getElementById("weightDisplay").textContent = state.weight + "kg";
     document.getElementById("menuVer").textContent = "HQ v" + APP_VERSION;
+    setBackupGroup(false);
     document.getElementById("menuSheet").classList.add("open");
   });
   // Workouts shortcut (⏱) — always opens to the list view.
@@ -6342,6 +6360,12 @@ if (window.location.hash === "#export") {
 }
 render();
 setupMenu();
+function setBackupGroup(open) {
+  const g = document.getElementById("backupGroup"), t = document.getElementById("backupToggle");
+  g.hidden = !open; t.setAttribute("aria-expanded", String(open));
+  document.getElementById("backupChev").textContent = open ? "▾" : "▸";
+}
+document.getElementById("backupToggle").addEventListener("click", () => setBackupGroup(document.getElementById("backupGroup").hidden));
 updateWeightBadge();
 
 // Register the service worker so the app keeps working offline once it's
