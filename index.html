@@ -2141,6 +2141,30 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
 .td-scroll { max-height: 272px; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
 .td-scroll.more { -webkit-mask-image: linear-gradient(180deg, #000 85%, transparent); mask-image: linear-gradient(180deg, #000 85%, transparent); padding-bottom: 18px; }
 .menu-ver { text-align: center; font-size: 12px; color: #9684b8; padding: 6px 0 2px; }
+/* Disciplines editor */
+.disc-h { font-family: 'Bebas Neue', sans-serif; letter-spacing: 2px; font-size: 13px; color: #9684b8; margin: 14px 0 6px; }
+.disc-h:first-child { margin-top: 0; }
+.disc-row { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.disc-row.off .disc-ic, .disc-row.off .disc-nm { opacity: 0.45; }
+.disc-ic { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 18px; background: color-mix(in srgb, var(--c) 28%, transparent); box-shadow: 0 0 0 1.5px var(--c) inset; flex-shrink: 0; }
+.disc-nm { flex: 1; min-width: 0; font-size: 15px; color: #f0e6ff; }
+.disc-nm small { display: block; font-size: 11px; color: #9684b8; }
+.disc-mv { background: rgba(255,255,255,0.06); border: none; color: #d4baeb; width: 30px; height: 30px; border-radius: 7px; font-size: 15px; }
+.disc-mv:disabled { opacity: 0.25; }
+.disc-tog { position: relative; width: 44px; height: 26px; border-radius: 13px; border: none; background: rgba(255,255,255,0.15); flex-shrink: 0; padding: 0; }
+.disc-tog i { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #d4baeb; transition: left 0.15s; }
+.disc-tog.on { background: #e8f84a; }
+.disc-tog.on i { left: 21px; background: #1a0633; }
+.disc-add { display: flex; flex-direction: column; gap: 10px; }
+.disc-add-r { display: flex; gap: 8px; align-items: center; }
+.disc-add-r .input { flex: 1; min-width: 0; }
+.disc-add-r .disc-emoji { flex: 0 0 64px; text-align: center; font-size: 18px; }
+.disc-add-r .disc-int { flex: 0 0 auto; width: auto; }
+.disc-add-r .ds-tog { flex: 1; color: #f0e6ff; font-size: 14px; }
+.disc-cols { display: grid; grid-template-columns: repeat(12, 1fr); gap: 5px; }
+.disc-col { aspect-ratio: 1; border-radius: 50%; border: none; padding: 0; }
+.disc-col.on { box-shadow: 0 0 0 2px #1a0633, 0 0 0 4px #fff; }
+.disc-addbtn { padding: 12px; }
 </style>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -2151,6 +2175,7 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
     <div class="menu-handle"></div>
     <button class="menu-item" id="settingsBtn"><span class="menu-icon">⚙</span>Bodyweight <span id="weightDisplay" style="color:#666; margin-left:auto;"></span></button>
     <button class="menu-item" id="planBtn"><span class="menu-icon">📅</span>Training Plan</button>
+    <button class="menu-item" id="discBtn"><span class="menu-icon">🏷</span>Disciplines</button>
     <button class="menu-item" id="backupToggle" aria-expanded="false"><span class="menu-icon">💾</span>Backup &amp; data <span class="menu-chev" id="backupChev">▸</span></button>
     <div class="menu-group" id="backupGroup" hidden>
       <button class="menu-item" id="exportBtn"><span class="menu-icon">⬇</span>Export backup (JSON)</button>
@@ -2172,6 +2197,15 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
     <div class="workout-card-note" style="color:#d4baeb; margin-bottom:12px;">In-device snapshots, taken once a week automatically. These survive a Clear-All-Data, but not phone loss — use the BACK UP banner for that.</div>
     <div id="restoreContent"></div>
     <button class="menu-item" id="closeRestoreBtn" style="color:#666; justify-content:center; margin-top:8px;">Close</button>
+  </div>
+</div>
+<div class="workout-sheet" id="discSheet">
+  <div class="workout-sheet-inner">
+    <div class="menu-handle"></div>
+    <div class="workout-title">Disciplines</div>
+    <div class="workout-card-note" style="color:#d4baeb;margin-bottom:12px;">Choose what shows when you log, plan and on Today. Hiding one keeps its history.</div>
+    <div id="discEditorContent"></div>
+    <button class="menu-item" id="closeDiscBtn" style="color:#666; justify-content:center; margin-top:8px;">Done</button>
   </div>
 </div>
 <div class="workout-sheet" id="planSheet">
@@ -2466,7 +2500,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "1.7";
+const APP_VERSION = "1.8";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -3828,6 +3862,7 @@ function buildFullBackup() {
     weights: daily.weights, weightSettings: daily.wset,
     todo: { week: todo.week, all: todo.all, notes: todo.notes },
     plan: loadPlan(),
+    disciplines: { enabled: discSet.enabled, custom: discSet.custom },
   };
 }
 function importAnyBackup(data) {
@@ -3878,6 +3913,11 @@ function importAnyBackup(data) {
     }
     if (data.weightSettings) { daily.wset = Object.assign({}, WEIGHT_DEFAULTS, data.weightSettings); saveWeightSettings(); }
     if (data.plan && typeof data.plan === "object") savePlan(data.plan);
+    if (data.disciplines && Array.isArray(data.disciplines.enabled)) {
+      discSet.enabled = data.disciplines.enabled.slice();
+      discSet.custom = Array.isArray(data.disciplines.custom) ? data.disciplines.custom.filter(c => c && /^[A-Za-z][A-Za-z0-9 \-]{0,13}$/.test(c.name || "")) : [];
+      saveDisciplines(); applyDisciplines();
+    }
     if (data.todo && Array.isArray(data.todo.all)) { todo.week = data.todo.week || []; todo.all = data.todo.all; todo.notes = data.todo.notes || []; saveTodo(); }
     const ws = weightStatus(); if (ws.cur) { state.weight = round1(ws.cur.avg); saveSettings(); }
     updateWeightBadge(); render(); showToast("Import complete");
@@ -4053,6 +4093,151 @@ function attachTodoHandlers() {
   const next = new Date(); next.setDate(next.getDate() + 1); next.setHours(0, 0, 0, 5);
   setTimeout(() => { todo.week = todo.week.filter(i => !(i.completed && i.completedAt < todoMidnight())); saveTodo(); render(); scheduleTodoMidnight(); }, next - new Date());
 })();
+
+
+// =====================================================================
+// ---------- Disciplines: choose which training types show, add your own ----------
+// DISCIPLINES (the logging list) becomes the person's chosen set, in their
+// order. History uses histDisciplines(): the chosen set plus anything already
+// logged, so hiding a type never hides past sessions.
+// =====================================================================
+const DISC_KEY = "hq:disciplines";
+const DISC_DEFAULT = ["Swim", "Run", "Strength", "Active", "Chilled", "Stretch"];
+const DISC_COLOURS = ["#38bdf8", "#16a34a", "#e8f84a", "#f97316", "#94a3b8", "#8b5cf6", "#2dd4bf", "#fb7185", "#c4b5fd", "#f59e0b", "#e879f9", "#ef4444"];
+const DISC_MET = { easy: 3, moderate: 5, hard: 8 };
+const F_DUR = { key: "duration", label: "Duration (min)", type: "number" };
+const F_DIST = { key: "distance", label: "Distance (km)", type: "number", step: "0.1" };
+const F_CAL = { key: "calories", label: "Calories", type: "number" };
+const DISC_PRESETS = {
+  Walk: { color: "#2dd4bf", icon: "🚶", met: 3.5, fields: [{ key: "steps", label: "Steps", type: "number", placeholder: "e.g. 8500" }, F_DUR, F_DIST, F_CAL] },
+  Pilates: { color: "#fb7185", icon: "🤸", met: 4.5, fields: [F_DUR, { key: "type", label: "Type (optional)", type: "text", placeholder: "e.g. Reformer, Mat" }, { key: "details", label: "Details (optional)", type: "text", placeholder: "Focus area, notes…" }, F_CAL] },
+  Yoga: { color: "#c4b5fd", icon: "🧘‍♀️", met: 4, fields: [F_DUR, { key: "type", label: "Type (optional)", type: "text", placeholder: "e.g. Vinyasa, Hatha, Power" }, { key: "details", label: "Details (optional)", type: "text", placeholder: "Focus area, notes…" }, F_CAL] },
+  Cycle: { color: "#f59e0b", icon: "🚴", met: 7, fields: [F_DUR, F_DIST, F_CAL] },
+  Other: { color: "#e879f9", icon: "✦", met: 5, fields: [{ key: "type", label: "Activity Type", type: "text", placeholder: "e.g. Hike, Tennis, Dance" }, F_DUR, F_DIST, F_CAL] },
+};
+const BUILTIN_DISC = Object.keys(DISCIPLINE_CONFIG);
+Object.keys(DISC_PRESETS).forEach(k => { if (!DISCIPLINE_CONFIG[k]) DISCIPLINE_CONFIG[k] = DISC_PRESETS[k]; });
+const discSet = Object.assign({ enabled: DISC_DEFAULT.slice(), custom: [] }, lsGet(DISC_KEY, {}) || {});
+if (!Array.isArray(discSet.custom)) discSet.custom = [];
+const discUI = { col: 6 };
+
+function customDiscConfig(c) {
+  const f = [F_DUR];
+  if (c.distance) f.push(F_DIST);
+  f.push({ key: "details", label: "Details (optional)", type: "text", placeholder: "Notes…" }, F_CAL);
+  return { color: c.color, icon: c.icon || "•", met: DISC_MET[c.intensity] || 5, fields: f, custom: true };
+}
+function allDisciplineNames() {
+  const preset = Object.keys(DISC_PRESETS).filter(k => !BUILTIN_DISC.includes(k));
+  return BUILTIN_DISC.concat(preset, discSet.custom.map(c => c.name));
+}
+function applyDisciplines() {
+  discSet.custom.forEach(c => { DISCIPLINE_CONFIG[c.name] = customDiscConfig(c); });
+  let en = (discSet.enabled || []).filter((n, i, a) => DISCIPLINE_CONFIG[n] && a.indexOf(n) === i);
+  if (!en.length) en = DISC_DEFAULT.slice();
+  discSet.enabled = en;
+  DISCIPLINES.splice(0, DISCIPLINES.length, ...en);
+  if (!DISCIPLINES.includes(state.activeDiscipline)) {
+    state.activeDiscipline = DISCIPLINES[0];
+    const cfg = DISCIPLINE_CONFIG[state.activeDiscipline];
+    state.activeSubType = cfg.subTypes ? Object.keys(cfg.subTypes)[0] : null;
+    state.form = emptyForm(state.activeDiscipline, state.activeSubType);
+  }
+  if (!DISCIPLINES.includes(state.historyTab)) { state.historyTab = DISCIPLINES[0]; state.historySubTab = null; }
+}
+function saveDisciplines() { lsSet(DISC_KEY, { enabled: discSet.enabled, custom: discSet.custom }); }
+function histDisciplines() {
+  const out = DISCIPLINES.slice();
+  state.sessions.forEach(s => {
+    const d = s.discipline;
+    if (!d || out.includes(d)) return;
+    if (!DISCIPLINE_CONFIG[d]) DISCIPLINE_CONFIG[d] = { color: "#94a3b8", icon: "•", met: 5, fields: [F_DUR, F_CAL] };
+    out.push(d);
+  });
+  return out;
+}
+applyDisciplines();
+
+function renderDiscEditor() {
+  const on = DISCIPLINES.slice();
+  const off = allDisciplineNames().filter(n => !on.includes(n));
+  const counts = {};
+  state.sessions.forEach(s => { counts[s.discipline] = (counts[s.discipline] || 0) + 1; });
+  const row = (n, isOn, i) => {
+    const c = DISCIPLINE_CONFIG[n] || {};
+    const isCustom = discSet.custom.some(x => x.name === n);
+    const nm = escapeHtml(n);
+    let ctrl = "";
+    if (isOn) ctrl = `<button class="disc-mv" data-disc-up="${i}" ${i === 0 ? "disabled" : ""} aria-label="Move up">↑</button><button class="disc-mv" data-disc-down="${i}" ${i === on.length - 1 ? "disabled" : ""} aria-label="Move down">↓</button>`;
+    else if (isCustom && !counts[n]) ctrl = `<button class="disc-mv" data-disc-del="${nm}" aria-label="Delete">✕</button>`;
+    return `<div class="disc-row ${isOn ? "" : "off"}">
+      <span class="disc-ic" style="--c:${c.color}">${c.icon || "•"}</span>
+      <span class="disc-nm">${nm}${counts[n] ? `<small>${counts[n]} logged</small>` : ""}</span>
+      ${ctrl}
+      <button class="disc-tog ${isOn ? "on" : ""}" data-disc-toggle="${nm}" aria-label="${isOn ? "Hide" : "Show"} ${nm}"><i></i></button>
+    </div>`;
+  };
+  return `<div class="disc-h">SHOWING</div>${on.map((n, i) => row(n, true, i)).join("")}
+    ${off.length ? `<div class="disc-h">HIDDEN</div>${off.map(n => row(n, false)).join("")}` : ""}
+    <div class="disc-h">ADD YOUR OWN</div>
+    <div class="disc-add">
+      <div class="disc-add-r"><input class="input" id="discName" maxlength="14" placeholder="Name, e.g. Tennis" autocomplete="off"><input class="input disc-emoji" id="discIcon" maxlength="4" placeholder="🎾"></div>
+      <div class="disc-cols">${DISC_COLOURS.map((c, i) => `<button class="disc-col ${i === discUI.col ? "on" : ""}" data-disc-col="${i}" style="background:${c}" aria-label="Colour ${i + 1}"></button>`).join("")}</div>
+      <div class="disc-add-r">
+        <label class="ds-tog"><input type="checkbox" id="discDist"> Has distance</label>
+        <select class="input disc-int" id="discInt"><option value="easy">Easy</option><option value="moderate" selected>Moderate</option><option value="hard">Hard</option></select>
+      </div>
+      <button class="w-save disc-addbtn" data-disc-add>ADD</button>
+    </div>`;
+}
+function commitDisciplines() {
+  saveDisciplines(); applyDisciplines();
+  const el = document.getElementById("discEditorContent");
+  if (el) el.innerHTML = renderDiscEditor();
+  render();
+}
+function onDiscEditorClick(e) {
+  const t = e.target.closest("button"); if (!t) return;
+  const d = t.dataset;
+  if (d.discCol != null) {
+    discUI.col = Number(d.discCol);
+    document.querySelectorAll("#discEditorContent .disc-col").forEach(b => b.classList.toggle("on", b === t));
+    return;
+  }
+  if (d.discToggle != null) {
+    const n = d.discToggle;
+    if (discSet.enabled.includes(n)) {
+      if (discSet.enabled.length === 1) { showToast("Keep at least one"); return; }
+      discSet.enabled = discSet.enabled.filter(x => x !== n);
+    } else discSet.enabled.push(n);
+    return commitDisciplines();
+  }
+  if (d.discUp != null || d.discDown != null) {
+    const i = Number(d.discUp != null ? d.discUp : d.discDown), j = d.discUp != null ? i - 1 : i + 1;
+    const a = discSet.enabled;
+    if (j < 0 || j >= a.length) return;
+    [a[i], a[j]] = [a[j], a[i]];
+    return commitDisciplines();
+  }
+  if (d.discDel != null) {
+    const n = d.discDel;
+    if (!confirm(`Delete "${n}"?`)) return;
+    discSet.custom = discSet.custom.filter(c => c.name !== n);
+    discSet.enabled = discSet.enabled.filter(x => x !== n);
+    delete DISCIPLINE_CONFIG[n];
+    return commitDisciplines();
+  }
+  if (d.discAdd != null) {
+    const name = (document.getElementById("discName").value || "").trim().replace(/\s+/g, " ");
+    if (!/^[A-Za-z][A-Za-z0-9 \-]{0,13}$/.test(name)) { showToast("Use letters, numbers and spaces (max 14)"); return; }
+    if (allDisciplineNames().some(x => x.toLowerCase() === name.toLowerCase()) || DISCIPLINE_CONFIG[name]) { showToast(`"${name}" already exists`); return; }
+    const icon = (document.getElementById("discIcon").value || "").trim() || "•";
+    discSet.custom.push({ name, icon, color: DISC_COLOURS[discUI.col] || DISC_COLOURS[0], distance: document.getElementById("discDist").checked, intensity: document.getElementById("discInt").value });
+    discSet.enabled.push(name);
+    commitDisciplines();
+    showToast(`Added ${name}`);
+  }
+}
 
 
 // ---------- Render ----------
@@ -4269,7 +4454,7 @@ function renderHistory() {
     <div style="margin-top:24px;">
       <div class="today-label">BY DISCIPLINE</div>
       <div class="discipline-grid" style="margin-bottom:16px;">
-        ${DISCIPLINES.map(d => {
+        ${histDisciplines().map(d => {
           const c = DISCIPLINE_CONFIG[d];
           const active = state.historyTab === d;
           // Count sessions for this discipline within the selected period
@@ -4346,16 +4531,17 @@ function renderByDiscipline(period) {
 
   // Group sessions by discipline
   const discSessions = {};
-  DISCIPLINES.forEach(d => discSessions[d] = []);
+  const HD = histDisciplines();
+  HD.forEach(d => discSessions[d] = []);
   state.sessions.forEach(s => {
     if (startKey && s.date < startKey) return;
     if (endKey   && s.date > endKey)   return;
     const val = parseFloat(isMin ? s.data?.duration : s.data?.calories);
     if (!val || val <= 0) return;
-    discSessions[s.discipline].push({ val, distance: parseFloat(s.data?.distance) || 0 });
+    (discSessions[s.discipline] || (discSessions[s.discipline] = [])).push({ val, distance: parseFloat(s.data?.distance) || 0 });
   });
 
-  const activeDiscs = DISCIPLINES;
+  const activeDiscs = HD;
   const discTotals  = {};
   activeDiscs.forEach(d => discTotals[d] = discSessions[d].reduce((s, x) => s + x.val, 0));
   const grandTotal  = activeDiscs.reduce((s, d) => s + discTotals[d], 0);
@@ -4511,7 +4697,8 @@ function renderDailyVolume(period) {
     }
   }
 
-  buckets.forEach(b => { b.totals = {}; DISCIPLINES.forEach(d => b.totals[d] = 0); b.total = 0; });
+  const HD = histDisciplines();
+  buckets.forEach(b => { b.totals = {}; HD.forEach(d => b.totals[d] = 0); b.total = 0; });
 
   // aggregate — for annual, filter to selected year via period bounds
   const startKey = period && period.start ? localISO(period.start) : null;
@@ -4607,7 +4794,7 @@ function renderDailyVolume(period) {
             const SEG_MIN_PX = 16;
             return buckets.map(b => {
               const stackHeight = b.total > 0 ? (b.total / yMax) * chartHeight : 0;
-              const segments = DISCIPLINES.filter(d => b.totals[d] > 0).map(d => {
+              const segments = HD.filter(d => b.totals[d] > 0).map(d => {
                 const segPct    = (b.totals[d] / b.total) * 100;
                 const segHeightPx = (b.totals[d] / yMax) * chartHeight;
                 const segLabel  = (showLabels && segHeightPx >= SEG_MIN_PX)
@@ -4643,7 +4830,7 @@ function renderDailyVolume(period) {
         </div>
       </div>
       <div class="weekly-legend">
-        ${DISCIPLINES.map(d => `
+        ${HD.filter(d => DISCIPLINES.includes(d) || buckets.some(b => b.totals[d] > 0)).map(d => `
           <div class="weekly-legend-item">
             <div class="weekly-legend-swatch" style="background:${DISCIPLINE_CONFIG[d].color};"></div>
             ${d}
@@ -6375,6 +6562,14 @@ function setBackupGroup(open) {
   g.hidden = !open; t.setAttribute("aria-expanded", String(open));
   document.getElementById("backupChev").textContent = open ? "▾" : "▸";
 }
+document.getElementById("discBtn").addEventListener("click", () => {
+  document.getElementById("menuSheet").classList.remove("open");
+  document.getElementById("discEditorContent").innerHTML = renderDiscEditor();
+  document.getElementById("discSheet").classList.add("open");
+});
+document.getElementById("discEditorContent").addEventListener("click", onDiscEditorClick);
+document.getElementById("closeDiscBtn").addEventListener("click", () => document.getElementById("discSheet").classList.remove("open"));
+document.getElementById("discSheet").addEventListener("click", e => { if (e.target.id === "discSheet") e.target.classList.remove("open"); });
 document.getElementById("backupToggle").addEventListener("click", () => setBackupGroup(document.getElementById("backupGroup").hidden));
 updateWeightBadge();
 
