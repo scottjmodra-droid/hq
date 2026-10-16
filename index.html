@@ -475,6 +475,10 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
   line-height: 1;
 }
 .history-delete:active { color: #ff5577; background: rgba(255,0,80,0.15); }
+.history-delete { top: 50%; right: 4px; transform: translateY(-50%); width: 44px; height: 44px; padding: 0; font-size: 26px;
+  display: flex; align-items: center; justify-content: center; border-radius: 10px; color: #b9a3d6; }
+.today-item:has(.history-delete) { padding-right: 52px; }
+.history-edit-del { background: rgba(255,85,119,0.12); color: #ff7790; border: 1px solid rgba(255,85,119,0.35); }
 
 .empty-state { color: #c8a8e8; font-size: 14px; padding: 28px 0; text-align: center; }
 
@@ -2097,6 +2101,8 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
 .td-overlay { position: fixed; inset: 0; background: rgba(10,2,24,0.75); z-index: 150; display: flex; align-items: flex-end; justify-content: center; }
 .td-modal { width: 100%; max-width: 480px; background: #2a0d52; border-radius: 18px 18px 0 0; padding: 14px 16px calc(16px + env(safe-area-inset-bottom)); }
 .td-modal-h { display: flex; justify-content: space-between; align-items: center; font-family: 'Bebas Neue', sans-serif; letter-spacing: 2px; font-size: 14px; color: #d4baeb; margin-bottom: 10px; }
+.td-modal-acts { display: flex; align-items: center; gap: 8px; }
+.td-bullet-btn { background: rgba(232,248,74,0.12); border: 1px solid rgba(232,248,74,0.45); color: #e8f84a; border-radius: 8px; padding: 5px 10px 4px; font-family: 'Bebas Neue', sans-serif; letter-spacing: 1.5px; font-size: 14px; }
 .td-modal textarea { width: 100%; min-height: 45vh; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 16px; padding: 12px; resize: none; outline: none; }
 .td-quick { display: flex; gap: 6px; margin-top: 10px; }
 .td-quick .input { flex: 1; min-width: 0; }
@@ -2500,7 +2506,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "1.8";
+const APP_VERSION = "1.9";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -4014,11 +4020,38 @@ function renderTodayTodoCard() {
 function openTodoNote(note) {
   const ov = document.createElement("div");
   ov.className = "td-overlay";
-  ov.innerHTML = `<div class="td-modal"><div class="td-modal-h"><span>FIRST LINE = TITLE</span><button class="link-btn" data-close>DONE</button></div><textarea placeholder="Title, then your note…"></textarea></div>`;
+  ov.innerHTML = `<div class="td-modal"><div class="td-modal-h"><span>FIRST LINE = TITLE</span><span class="td-modal-acts"><button class="td-bullet-btn" data-bullet aria-label="Bullet point">• LIST</button><button class="link-btn" data-close>DONE</button></span></div><textarea placeholder="Title, then your note…"></textarea></div>`;
   const ta = ov.querySelector("textarea");
   ta.value = note.text || "";
   document.body.appendChild(ov);
   ta.focus();
+  // Bullets: the • LIST button toggles a bullet on the current line; return on a
+  // bullet line starts the next bullet; return on an empty bullet ends the list.
+  const BUL = /^(\s*)• /;
+  const lineStart = pos => ta.value.lastIndexOf("\n", pos - 1) + 1;
+  const setCaret = pos => { ta.selectionStart = ta.selectionEnd = pos; };
+  const continueBullet = () => {
+    const pos = ta.selectionStart;
+    if (pos !== ta.selectionEnd) return false;
+    const ls = lineStart(pos), line = ta.value.slice(ls, pos), m = line.match(BUL);
+    if (!m) return false;
+    if (line.trim() === "•") { ta.value = ta.value.slice(0, ls) + ta.value.slice(pos); setCaret(ls); return true; }
+    const ins = "\n" + m[1] + "• ";
+    ta.value = ta.value.slice(0, pos) + ins + ta.value.slice(pos); setCaret(pos + ins.length);
+    return true;
+  };
+  ta.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && continueBullet()) e.preventDefault(); });
+  ta.addEventListener("beforeinput", e => { if ((e.inputType === "insertLineBreak" || e.inputType === "insertParagraph") && continueBullet()) e.preventDefault(); });
+  const bb = ov.querySelector("[data-bullet]");
+  bb.addEventListener("pointerdown", e => e.preventDefault());   // keep the keyboard up
+  bb.addEventListener("click", () => {
+    const pos = ta.selectionStart, ls = lineStart(pos), le0 = ta.value.indexOf("\n", pos), le = le0 < 0 ? ta.value.length : le0;
+    const line = ta.value.slice(ls, le);
+    if (BUL.test(line)) { const nl = line.replace(BUL, "$1"); ta.value = ta.value.slice(0, ls) + nl + ta.value.slice(le); setCaret(Math.max(ls, pos - 2)); }
+    else if (ls === 0 && ta.value.indexOf("\n") < 0 && line.length) { ta.value = line + "\n• "; setCaret(ta.value.length); }   // title line: start a list underneath
+    else { ta.value = ta.value.slice(0, ls) + "• " + line + ta.value.slice(le); setCaret(pos + 2); }
+    ta.focus();
+  });
   const commit = () => {
     const v = ta.value.trim();
     if (!v) todo.notes = todo.notes.filter(n => n !== note); else note.text = v;
@@ -5796,6 +5829,7 @@ function renderHistoryEdit(s, cfg) {
           `;
         }).join("")}
         <div class="history-edit-actions">
+          <button type="button" class="history-edit-del" data-delete="${s.id}">DELETE</button>
           <button type="button" class="history-edit-cancel" data-edit-cancel>CANCEL</button>
           <button type="button" class="history-edit-save" data-edit-save="${s.id}">SAVE</button>
         </div>
