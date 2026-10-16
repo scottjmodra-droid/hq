@@ -1895,6 +1895,10 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
 
 /* ===== v0.90: TODAY / DRINK / WEIGHT ===== */
 .train-sub { margin-bottom: 18px; }
+/* top-level section toggles (Log/History, Week/All/Notes): bolder than period pills */
+.range-toggle.train-sub { padding: 5px; border-radius: 12px; background: rgba(255,255,255,0.07); }
+.range-toggle.train-sub .range-btn { padding: 11px 4px 9px; font-size: 16px; letter-spacing: 2px; color: #e3d2fb; border-radius: 9px; }
+.range-toggle.train-sub .range-btn.active { background: #e8f84a; color: #1a0633; box-shadow: 0 4px 14px rgba(232,248,74,0.25); }
 .dcard {
   background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.10);
   border-radius: 14px; padding: 16px; margin-bottom: 14px; backdrop-filter: blur(8px);
@@ -1987,6 +1991,12 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
 .plan-today .pt-icon { font-size: 22px; line-height: 1; }
 .plan-today .pt-name { flex: 1; }
 .plan-today .pt-tick { font-size: 20px; }
+/* compact session chips on Today */
+.plan-today-row { gap: 6px; }
+.plan-today { flex: 0 0 auto; gap: 6px; padding: 6px 11px 5px; border-radius: 999px; font-size: 14px; border-width: 1.5px; }
+.plan-today .pt-icon { font-size: 15px; }
+.plan-today .pt-name { flex: 0 0 auto; }
+.plan-today .pt-tick { font-size: 14px; }
 .plan-rest { font-family: 'Bebas Neue', sans-serif; letter-spacing: 2px; font-size: 18px; color: #c8a8e8; padding: 6px 0; }
 .tw-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 16px; }
 .tw-day { display: flex; flex-direction: column; align-items: center; gap: 4px; }
@@ -2456,7 +2466,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "1.6";
+const APP_VERSION = "1.7";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -3686,8 +3696,8 @@ function renderTrainSubtabs() {
     <button class="range-btn ${state.view === "log" ? "active" : ""}" data-view="log">LOG</button>
     <button class="range-btn ${state.view === "history" ? "active" : ""}" data-view="history">HISTORY</button>
   </div>${state.view === "log" ? `<div class="launch-row">
-    <button class="launch-btn" id="openWorkouts"><span class="li">🏋️</span><span class="ll">WORKOUT</span><span class="lc">›</span></button>
-    <button class="launch-btn" id="openStretch"><span class="li">🧘</span><span class="ll">STRETCH</span><span class="lc">›</span></button>
+    <button class="launch-btn" id="openWorkouts"><span class="ll">WORKOUT</span><span class="lc">›</span></button>
+    <button class="launch-btn" id="openStretch"><span class="ll">STRETCH</span><span class="lc">›</span></button>
   </div>` : ""}`;
 }
 function renderMainView() {
