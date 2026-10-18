@@ -2102,8 +2102,11 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
 .td-modal { width: 100%; max-width: 480px; background: #2a0d52; border-radius: 18px 18px 0 0; padding: 14px 16px calc(16px + env(safe-area-inset-bottom)); }
 .td-modal-h { display: flex; justify-content: space-between; align-items: center; font-family: 'Bebas Neue', sans-serif; letter-spacing: 2px; font-size: 14px; color: #d4baeb; margin-bottom: 10px; }
 .td-modal-acts { display: flex; align-items: center; gap: 8px; }
-.td-bullet-btn { background: rgba(232,248,74,0.12); border: 1px solid rgba(232,248,74,0.45); color: #e8f84a; border-radius: 8px; padding: 5px 10px 4px; font-family: 'Bebas Neue', sans-serif; letter-spacing: 1.5px; font-size: 14px; }
-.td-modal textarea { width: 100%; min-height: 45vh; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 16px; padding: 12px; resize: none; outline: none; }
+.td-toolbar { display: flex; gap: 8px; margin-top: 10px; }
+.td-bullet-btn { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.18); color: #c8a8e8; border-radius: 10px; padding: 8px 14px 7px; font-family: 'Bebas Neue', sans-serif; letter-spacing: 1.5px; font-size: 15px; }
+.td-bullet-btn .tb-dot { font-size: 20px; line-height: 0.6; }
+.td-bullet-btn.on { background: #e8f84a; border-color: #e8f84a; color: #1a0633; }
+.td-modal textarea { width: 100%; min-height: 40vh; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 16px; padding: 12px; resize: none; outline: none; }
 .td-quick { display: flex; gap: 6px; margin-top: 10px; }
 .td-quick .input { flex: 1; min-width: 0; }
 .td-quick .w-save { min-width: 50px; font-size: 22px; }
@@ -2523,7 +2526,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "2.1";
+const APP_VERSION = "2.2";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -4040,7 +4043,7 @@ function renderTodayTodoCard() {
 function openTodoNote(note) {
   const ov = document.createElement("div");
   ov.className = "td-overlay";
-  ov.innerHTML = `<div class="td-modal"><div class="td-modal-h"><span>FIRST LINE = TITLE</span><span class="td-modal-acts"><button class="td-bullet-btn" data-bullet aria-label="Bullet point">• LIST</button><button class="link-btn" data-close>DONE</button></span></div><textarea placeholder="Title, then your note…"></textarea></div>`;
+  ov.innerHTML = `<div class="td-modal"><div class="td-modal-h"><span>FIRST LINE = TITLE</span><button class="link-btn" data-close>DONE</button></div><textarea placeholder="Title, then your note…"></textarea><div class="td-toolbar"><button class="td-bullet-btn" data-bullet aria-label="Bullet point" aria-pressed="false"><span class="tb-dot">•</span> BULLET</button></div></div>`;
   const ta = ov.querySelector("textarea");
   ta.value = note.text || "";
   document.body.appendChild(ov);
@@ -4060,8 +4063,16 @@ function openTodoNote(note) {
     ta.value = ta.value.slice(0, pos) + ins + ta.value.slice(pos); setCaret(pos + ins.length);
     return true;
   };
-  ta.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && continueBullet()) e.preventDefault(); });
-  ta.addEventListener("beforeinput", e => { if ((e.inputType === "insertLineBreak" || e.inputType === "insertParagraph") && continueBullet()) e.preventDefault(); });
+  const syncBullet = () => {
+    const pos = ta.selectionStart, ls = lineStart(pos), le0 = ta.value.indexOf("\n", pos), le = le0 < 0 ? ta.value.length : le0;
+    const on = BUL.test(ta.value.slice(ls, le));
+    const b = ov.querySelector("[data-bullet]");
+    b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on));
+  };
+  ["input", "keyup", "click", "focus"].forEach(ev => ta.addEventListener(ev, syncBullet));
+  document.addEventListener("selectionchange", syncBullet);
+  ta.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && continueBullet()) { e.preventDefault(); syncBullet(); } });
+  ta.addEventListener("beforeinput", e => { if ((e.inputType === "insertLineBreak" || e.inputType === "insertParagraph") && continueBullet()) { e.preventDefault(); syncBullet(); } });
   const bb = ov.querySelector("[data-bullet]");
   bb.addEventListener("pointerdown", e => e.preventDefault());   // keep the keyboard up
   bb.addEventListener("click", () => {
@@ -4070,11 +4081,12 @@ function openTodoNote(note) {
     if (BUL.test(line)) { const nl = line.replace(BUL, "$1"); ta.value = ta.value.slice(0, ls) + nl + ta.value.slice(le); setCaret(Math.max(ls, pos - 2)); }
     else if (ls === 0 && ta.value.indexOf("\n") < 0 && line.length) { ta.value = line + "\n• "; setCaret(ta.value.length); }   // title line: start a list underneath
     else { ta.value = ta.value.slice(0, ls) + "• " + line + ta.value.slice(le); setCaret(pos + 2); }
-    ta.focus();
+    ta.focus(); syncBullet();
   });
   const commit = () => {
     const v = ta.value.trim();
     if (!v) todo.notes = todo.notes.filter(n => n !== note); else note.text = v;
+    document.removeEventListener("selectionchange", syncBullet);
     saveTodo(); ov.remove(); render();
   };
   ov.querySelector("[data-close]").addEventListener("click", commit);
