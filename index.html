@@ -2105,6 +2105,7 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
 .td-toolbar { display: flex; gap: 8px; margin-top: 10px; }
 .td-bullet-btn { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.18); color: #c8a8e8; border-radius: 10px; padding: 8px 14px 7px; font-family: 'Bebas Neue', sans-serif; letter-spacing: 1.5px; font-size: 15px; }
 .td-bullet-btn .tb-dot { font-size: 20px; line-height: 0.6; }
+.td-bullet-btn .tb-num { font-size: 15px; }
 .td-bullet-btn.on { background: #e8f84a; border-color: #e8f84a; color: #1a0633; }
 .td-modal textarea { width: 100%; min-height: 40vh; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 16px; padding: 12px; resize: none; outline: none; }
 .td-quick { display: flex; gap: 6px; margin-top: 10px; }
@@ -2526,7 +2527,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "2.2";
+const APP_VERSION = "2.3";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -4043,46 +4044,80 @@ function renderTodayTodoCard() {
 function openTodoNote(note) {
   const ov = document.createElement("div");
   ov.className = "td-overlay";
-  ov.innerHTML = `<div class="td-modal"><div class="td-modal-h"><span>FIRST LINE = TITLE</span><button class="link-btn" data-close>DONE</button></div><textarea placeholder="Title, then your note…"></textarea><div class="td-toolbar"><button class="td-bullet-btn" data-bullet aria-label="Bullet point" aria-pressed="false"><span class="tb-dot">•</span> BULLET</button></div></div>`;
+  ov.innerHTML = `<div class="td-modal"><div class="td-modal-h"><span>FIRST LINE = TITLE</span><button class="link-btn" data-close>DONE</button></div><textarea placeholder="Title, then your note…"></textarea><div class="td-toolbar"><button class="td-bullet-btn" data-bullet aria-label="Bullet list" aria-pressed="false"><span class="tb-dot">•</span> BULLET</button><button class="td-bullet-btn" data-number aria-label="Numbered list" aria-pressed="false"><span class="tb-num">1.</span> NUMBER</button></div></div>`;
   const ta = ov.querySelector("textarea");
   ta.value = note.text || "";
   document.body.appendChild(ov);
   ta.focus();
-  // Bullets: the • LIST button toggles a bullet on the current line; return on a
-  // bullet line starts the next bullet; return on an empty bullet ends the list.
-  const BUL = /^(\s*)• /;
+  // Lists: • BULLET and 1. NUMBER switch the current line's style (tap the lit
+  // one again to turn it off). Return continues the list; return on an empty
+  // item ends it. Numbered runs renumber themselves.
+  const BUL = /^(\s*)• /, NUM = /^(\s*)(\d+)\. /;
   const lineStart = pos => ta.value.lastIndexOf("\n", pos - 1) + 1;
+  const lineEnd = pos => { const i = ta.value.indexOf("\n", pos); return i < 0 ? ta.value.length : i; };
   const setCaret = pos => { ta.selectionStart = ta.selectionEnd = pos; };
-  const continueBullet = () => {
+  const kindOf = line => BUL.test(line) ? "bullet" : NUM.test(line) ? "number" : null;
+  const stripMarker = line => line.replace(BUL, "$1").replace(NUM, "$1");
+  const indentOf = line => (line.match(/^\s*/) || [""])[0];
+  const renumber = (lines, i) => {
+    if (i < 0 || i >= lines.length || !NUM.test(lines[i])) return;
+    let a = i; while (a > 0 && NUM.test(lines[a - 1])) a--;
+    let n = 1;
+    for (let k = a; k < lines.length && NUM.test(lines[k]); k++) lines[k] = lines[k].replace(NUM, (m, sp) => `${sp}${n++}. `);
+  };
+  const lineIndex = pos => ta.value.slice(0, lineStart(pos)).split("\n").length - 1;
+  const editLine = fn => {
+    const pos = ta.selectionStart, ls = lineStart(pos), lines = ta.value.split("\n"), idx = lineIndex(pos);
+    const old = lines[idx];
+    const offInText = Math.max(0, (pos - ls) - (old.length - stripMarker(old).length));
+    fn(lines, idx);
+    renumber(lines, idx); renumber(lines, idx + 1);
+    ta.value = lines.join("\n");
+    const nls = lines.slice(0, idx).reduce((t, l) => t + l.length + 1, 0);
+    const markerLen = lines[idx].length - stripMarker(lines[idx]).length;
+    setCaret(Math.min(nls + lines[idx].length, nls + markerLen + offInText));
+  };
+  const continueList = () => {
     const pos = ta.selectionStart;
     if (pos !== ta.selectionEnd) return false;
-    const ls = lineStart(pos), line = ta.value.slice(ls, pos), m = line.match(BUL);
-    if (!m) return false;
-    if (line.trim() === "•") { ta.value = ta.value.slice(0, ls) + ta.value.slice(pos); setCaret(ls); return true; }
-    const ins = "\n" + m[1] + "• ";
-    ta.value = ta.value.slice(0, pos) + ins + ta.value.slice(pos); setCaret(pos + ins.length);
+    const ls = lineStart(pos), le = lineEnd(pos), full = ta.value.slice(ls, le), k = kindOf(full);
+    if (!k) return false;
+    if (stripMarker(full).trim() === "") { ta.value = ta.value.slice(0, ls) + ta.value.slice(le); setCaret(ls); return true; }
+    const m = k === "bullet" ? full.match(BUL) : full.match(NUM);
+    const marker = k === "bullet" ? `${m[1]}• ` : `${m[1]}${Number(m[2]) + 1}. `;
+    ta.value = ta.value.slice(0, pos) + "\n" + marker + ta.value.slice(pos);
+    const caret = pos + 1 + marker.length;
+    if (k === "number") { const lines = ta.value.split("\n"); renumber(lines, lineIndex(caret)); ta.value = lines.join("\n"); }
+    setCaret(caret);
     return true;
   };
+  const bBtn = ov.querySelector("[data-bullet]"), nBtn = ov.querySelector("[data-number]");
   const syncBullet = () => {
-    const pos = ta.selectionStart, ls = lineStart(pos), le0 = ta.value.indexOf("\n", pos), le = le0 < 0 ? ta.value.length : le0;
-    const on = BUL.test(ta.value.slice(ls, le));
-    const b = ov.querySelector("[data-bullet]");
-    b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on));
+    const pos = ta.selectionStart, k = kindOf(ta.value.slice(lineStart(pos), lineEnd(pos)));
+    bBtn.classList.toggle("on", k === "bullet"); bBtn.setAttribute("aria-pressed", String(k === "bullet"));
+    nBtn.classList.toggle("on", k === "number"); nBtn.setAttribute("aria-pressed", String(k === "number"));
   };
   ["input", "keyup", "click", "focus"].forEach(ev => ta.addEventListener(ev, syncBullet));
   document.addEventListener("selectionchange", syncBullet);
-  ta.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && continueBullet()) { e.preventDefault(); syncBullet(); } });
-  ta.addEventListener("beforeinput", e => { if ((e.inputType === "insertLineBreak" || e.inputType === "insertParagraph") && continueBullet()) { e.preventDefault(); syncBullet(); } });
-  const bb = ov.querySelector("[data-bullet]");
-  bb.addEventListener("pointerdown", e => e.preventDefault());   // keep the keyboard up
-  bb.addEventListener("click", () => {
-    const pos = ta.selectionStart, ls = lineStart(pos), le0 = ta.value.indexOf("\n", pos), le = le0 < 0 ? ta.value.length : le0;
-    const line = ta.value.slice(ls, le);
-    if (BUL.test(line)) { const nl = line.replace(BUL, "$1"); ta.value = ta.value.slice(0, ls) + nl + ta.value.slice(le); setCaret(Math.max(ls, pos - 2)); }
-    else if (ls === 0 && ta.value.indexOf("\n") < 0 && line.length) { ta.value = line + "\n• "; setCaret(ta.value.length); }   // title line: start a list underneath
-    else { ta.value = ta.value.slice(0, ls) + "• " + line + ta.value.slice(le); setCaret(pos + 2); }
-    ta.focus(); syncBullet();
-  });
+  ta.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && continueList()) { e.preventDefault(); syncBullet(); } });
+  ta.addEventListener("beforeinput", e => { if ((e.inputType === "insertLineBreak" || e.inputType === "insertParagraph") && continueList()) { e.preventDefault(); syncBullet(); } });
+  const listButton = (btn, kind, marker) => {
+    btn.addEventListener("pointerdown", e => e.preventDefault());   // keep the keyboard up
+    btn.addEventListener("click", () => {
+      const v = ta.value;
+      if (lineIndex(ta.selectionStart) === 0 && v.indexOf("\n") < 0 && v.trim()) {   // title only: start a list underneath
+        ta.value = v + "\n" + marker; setCaret(ta.value.length);
+      } else {
+        editLine((lines, i) => {
+          const L = lines[i];
+          lines[i] = kindOf(L) === kind ? stripMarker(L) : indentOf(L) + marker + stripMarker(L).replace(/^\s*/, "");
+        });
+      }
+      ta.focus(); syncBullet();
+    });
+  };
+  listButton(bBtn, "bullet", "• ");
+  listButton(nBtn, "number", "1. ");
   const commit = () => {
     const v = ta.value.trim();
     if (!v) todo.notes = todo.notes.filter(n => n !== note); else note.text = v;
