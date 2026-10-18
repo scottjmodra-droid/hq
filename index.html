@@ -2527,7 +2527,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "2.3";
+const APP_VERSION = "2.4";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -2979,16 +2979,15 @@ function loadSessions() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       state.sessions = JSON.parse(raw);
-      // v0.10: Cycle -> Walk.  v0.19: Weights -> Strength.
+      // HQ: Walk, Cycle and Other are now disciplines in their own right, so the
+      // old TRACKR moves (Cycle → Walk, Walk → Chilled/Walk, Other → Active/Other)
+      // are gone. v0.19: Weights -> Strength.
       // v0.26: Strength's totalSets + topLift collapse into a single "details" field.
       // v0.54: Row → Hard/Row, Walk → Low/Walk, Other → Moderate/Other (legacy migration).
       // v0.56: Hard/Moderate → Active, Low/Stretch → Stretch, Low → Chilled.
       state.sessions.forEach(s => {
-        if (s.discipline === "Cycle") s.discipline = "Walk";
         if (s.discipline === "Weights") s.discipline = "Strength";
         if (s.discipline === "Row"   && !s.subType) { s.discipline = "Hard";     s.subType = "Row"; }
-        if (s.discipline === "Walk"  && !s.subType) { s.discipline = "Low";      s.subType = "Walk"; }
-        if (s.discipline === "Other" && !s.subType) { s.discipline = "Moderate"; s.subType = "Other"; }
         if (s.discipline === "Low" && s.subType === "Stretch") { s.discipline = "Stretch"; s.subType = null; }
         if (s.discipline === "Low")      { s.discipline = "Chilled"; }
         if (s.discipline === "Hard")     { s.discipline = "Active"; }
@@ -3006,8 +3005,22 @@ function loadSessions() {
           delete s.data.topLift;
         }
       });
+      repairForDisciplines();
     }
   } catch (e) { console.warn("Load failed", e); }
+}
+// Walks and "Other" sessions that older HQ versions filed under Chilled/Active:
+// if this phone uses Walk (or Other) and not Chilled (or Active), move them back.
+function repairForDisciplines() {
+  if (typeof discSet === "undefined") return 0;
+  const en = discSet.enabled || [];
+  let fixed = 0;
+  state.sessions.forEach(s => {
+    if (s.discipline === "Chilled" && s.subType === "Walk" && en.includes("Walk") && !en.includes("Chilled")) { s.discipline = "Walk"; s.subType = null; fixed++; }
+    else if (s.discipline === "Active" && s.subType === "Other" && en.includes("Other") && !en.includes("Active")) { s.discipline = "Other"; s.subType = null; fixed++; }
+  });
+  if (fixed) saveSessions();
+  return fixed;
 }
 function saveSessions() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.sessions)); }
@@ -4292,6 +4305,8 @@ function renderDiscEditor() {
 }
 function commitDisciplines() {
   saveDisciplines(); applyDisciplines();
+  const fixed = repairForDisciplines();
+  if (fixed) showToast(`Moved ${fixed} session${fixed === 1 ? "" : "s"} back to their own type`);
   const el = document.getElementById("discEditorContent");
   if (el) el.innerHTML = renderDiscEditor();
   render();
