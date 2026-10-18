@@ -2171,6 +2171,23 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
 .disc-col { aspect-ratio: 1; border-radius: 50%; border: none; padding: 0; }
 .disc-col.on { box-shadow: 0 0 0 2px #1a0633, 0 0 0 4px #fff; }
 .disc-addbtn { padding: 12px; }
+
+/* Cheer pop-up */
+.cheer { position: fixed; inset: 0; z-index: 400; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(10,2,24,0.55); animation: cheerFade 0.2s ease-out; }
+.cheer.out { opacity: 0; transition: opacity 0.25s; }
+.cheer-card {
+  width: 100%; max-width: 340px; text-align: center; padding: 26px 22px 20px; border-radius: 22px;
+  background: linear-gradient(160deg, #3a1470, #1a0633); border: 2px solid var(--c);
+  box-shadow: 0 0 0 6px rgba(232,248,74,0.10), 0 20px 50px rgba(0,0,0,0.55);
+  animation: cheerPop 0.45s cubic-bezier(.2,1.6,.4,1);
+}
+.cheer-emoji { font-size: 54px; line-height: 1; animation: cheerWiggle 0.6s ease-in-out 0.2s; }
+.cheer-line { font-family: 'Bebas Neue', sans-serif; font-size: 34px; line-height: 1.05; letter-spacing: 1px; color: #fff; margin-top: 12px; }
+.cheer-sub { font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 2px; color: var(--c); margin-top: 12px; }
+@keyframes cheerPop { 0% { transform: scale(0.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes cheerFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cheerWiggle { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-14deg) scale(1.15); } 75% { transform: rotate(10deg) scale(1.1); } }
+@media (prefers-reduced-motion: reduce) { .cheer-card, .cheer-emoji, .cheer { animation: none; } }
 </style>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -2506,7 +2523,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "1.9";
+const APP_VERSION = "2.0";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -4273,6 +4290,66 @@ function onDiscEditorClick(e) {
 }
 
 
+
+// ---------- Cheer pop-up when a session is logged ----------
+// Works through a shuffled deck so you see all 20 before any repeats.
+const CHEERS = [
+  "Fuck yeah, you smashed that!",
+  "Absolute weapon.",
+  "That {d} never stood a chance.",
+  "Sweaty. Smug. Deserved.",
+  "Future you just sent a thank-you card.",
+  "Couch: 0. You: 1.",
+  "Legend status: renewed.",
+  "Get around it, champ.",
+  "Hot damn, look at you go.",
+  "You're basically an athlete now. Basically.",
+  "Logged. Flexed. Unstoppable.",
+  "Bloody oath, what a session.",
+  "Somewhere a PT just felt a disturbance.",
+  "Beast mode on. Snacks earned (within reason).",
+  "That's how it's bloody done.",
+  "Main character energy.",
+  "Another brick in the wall of gains.",
+  "Your excuses called. You didn't pick up.",
+  "Done and dusted. Go strut.",
+  "Mate. MATE. Unreal.",
+];
+const CHEER_EMOJI = ["🔥", "💪", "🏆", "🚀", "⚡", "👊", "🥇", "😤"];
+function nextCheer() {
+  let bag = lsGet("hq:cheer-bag", []);
+  if (!Array.isArray(bag) || !bag.length || bag.some(i => i >= CHEERS.length)) {
+    bag = CHEERS.map((_, i) => i);
+    for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }
+    const last = lsGet("hq:cheer-last", -1);
+    if (bag[0] === last) [bag[0], bag[bag.length - 1]] = [bag[bag.length - 1], bag[0]];
+  }
+  const i = bag.shift(); lsSet("hq:cheer-bag", bag); lsSet("hq:cheer-last", i);
+  return CHEERS[i];
+}
+let cheerTimer = null;
+function celebrate(discipline, detail) {
+  try {
+    document.querySelector(".cheer")?.remove();
+    clearTimeout(cheerTimer);
+    const name = discipline ? String(discipline).toLowerCase() : "session";
+    const line = nextCheer().replace("{d}", name);
+    const emoji = CHEER_EMOJI[Math.floor(Math.random() * CHEER_EMOJI.length)];
+    const cfg = DISCIPLINE_CONFIG[discipline] || {};
+    const el = document.createElement("div");
+    el.className = "cheer";
+    el.innerHTML = `<div class="cheer-card" style="--c:${cfg.color || "#e8f84a"}">
+      <div class="cheer-emoji">${emoji}</div>
+      <div class="cheer-line">${escapeHtml(line)}</div>
+      <div class="cheer-sub">${cfg.icon || ""} ${escapeHtml(String(discipline || "").toUpperCase())} LOGGED${detail ? " · " + escapeHtml(detail) : ""}</div>
+    </div>`;
+    el.addEventListener("click", () => el.remove());
+    document.body.appendChild(el);
+    navigator.vibrate?.([30, 40, 60]);
+    cheerTimer = setTimeout(() => { el.classList.add("out"); setTimeout(() => el.remove(), 250); }, 2600);
+  } catch (e) {}
+}
+
 // ---------- Render ----------
 function render() {
   const app = document.getElementById("app");
@@ -5042,7 +5119,7 @@ function finishCustomTimer() {
       data: { duration: String(elapsedMin), type: "Custom Timer", details: `${t.settings.rounds} rounds · ${t.settings.intervals} intervals`, calories: String(Math.round(5 * (state.weight||94) * (elapsedMin/60))) }
     });
     saveSessions();
-    showToast(`Custom timer logged — ${elapsedMin} min`);
+    celebrate("Strength", `${elapsedMin} MIN`);
   }
   render();
 }
@@ -5363,6 +5440,7 @@ function logWorkoutSession(elapsedMin, completed) {
     },
   });
   saveSessions();
+  celebrate("Strength", `${finalMin} MIN`);
   return true;
 }
 function finishWorkout() {
@@ -5386,7 +5464,7 @@ function endWorkout() {
     }
   }
   cleanupWorkout();
-  if (logged) showToast(`Logged ${elapsedMin}-min Strength session`);
+
 }
 function cleanupWorkout() {
   state.workoutTimer = null;
@@ -6077,6 +6155,7 @@ function handleSave() {
   state.form = emptyForm(state.activeDiscipline, state.activeSubType);
   state.saved = true;
   render();
+  celebrate(session.discipline, session.data.duration ? fmtDuration(session.data.duration) : "");
   setTimeout(() => { state.saved = false; render(); }, 2000);
 }
 
@@ -7802,6 +7881,7 @@ function reach_showComplete(){
       data: { duration: String(minsLogged), calories }
     });
     saveSessions();
+    celebrate('Stretch', `${minsLogged} MIN`);
   }
   const screen = document.getElementById('reach-completeScreen');
   screen.innerHTML = `
