@@ -2523,7 +2523,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "2.0";
+const APP_VERSION = "2.1";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -3060,9 +3060,12 @@ function daysSinceLastBackup() {
 function shouldShowBackupBanner() {
   if (state.bannerDismissed) return false;
   if (state.sessions.length === 0) return false;
-  // Sunday-only reminder: show on Sunday unless we already backed up today.
+  // Sunday from 4pm, unless already backed up or dismissed today. Dismissal is
+  // remembered (iOS reloads the app every time you switch back to it).
   const today = new Date();
   if (today.getDay() !== 0) return false;     // 0 = Sunday
+  if (today.getHours() < 16) return false;
+  try { if (localStorage.getItem("hq:backup-dismissed") === todayISO()) return false; } catch (e) {}
   if (state.lastBackup && new Date(state.lastBackup).toDateString() === today.toDateString()) return false;
   return true;
 }
@@ -4387,7 +4390,7 @@ function render() {
 function renderBackupBanner() {
   return `
     <div class="backup-banner">
-      <div class="backup-banner-text"><strong>Sunday backup time.</strong> Save everything to iCloud Drive.</div>
+      <div class="backup-banner-text"><strong>Sunday backup time.</strong> Save to iCloud Drive, then upload it to your Dashboard.</div>
       <button class="backup-banner-action" id="backupNowBtn">BACK UP</button>
       <button class="backup-banner-dismiss" id="backupDismissBtn" aria-label="Dismiss">×</button>
     </div>
@@ -6115,6 +6118,7 @@ function attachHandlers() {
   const dismissBtn = document.getElementById("backupDismissBtn");
   if (dismissBtn) dismissBtn.addEventListener("click", () => {
     state.bannerDismissed = true;
+    try { localStorage.setItem("hq:backup-dismissed", todayISO()); } catch (e) {}
     render();
   });
 }
