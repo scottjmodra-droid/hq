@@ -2527,7 +2527,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "2.4";
+const APP_VERSION = "2.5";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -4176,7 +4176,7 @@ function attachTodoHandlers() {
   on("[data-td-move]", "click", el => {
     const id = el.dataset.tdMove;
     if (el.dataset.tdList === "week") { const i = find("week", id); if (!i) return; todo.week = todo.week.filter(x => x !== i); todo.all.push({ id: i.id, text: i.text, tag: "", completed: false }); showToast("Moved to All"); }
-    else { const i = find("all", id); if (!i) return; todo.all = todo.all.filter(x => x !== i); todo.week.unshift({ id: i.id, text: i.text, completed: false, completedAt: null, day: "" }); showToast("Moved to Week"); }
+    else { const i = find("all", id); if (!i) return; todo.all = todo.all.filter(x => x !== i); todo.week.unshift({ id: i.id, text: i.text, completed: false, completedAt: null, day: "today" }); showToast("Moved to Today"); }
     saveTodo(); render();
   });
   on("[data-td-del]", "click", el => {
@@ -6504,6 +6504,7 @@ function setupMenu() {
   attachSheetSwipe(sheet, sheet.querySelector(".menu-sheet-inner"));
   attachSheetSwipe(document.getElementById("planSheet"), document.querySelector("#planSheet .workout-sheet-inner"));
   attachSheetSwipe(document.getElementById("workoutSheet"), document.querySelector("#workoutSheet .workout-sheet-inner"));
+  attachSheetSwipe(document.getElementById("discSheet"), document.querySelector("#discSheet .workout-sheet-inner"));
 
   document.getElementById("settingsBtn").addEventListener("click", () => {
     const newWeight = prompt(`Bodyweight in kg (used for calorie estimates):`, state.weight);
