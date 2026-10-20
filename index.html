@@ -2150,6 +2150,10 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
 .dcard-link:active { color: #fff; }
 .td-scroll { max-height: 272px; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
 .td-scroll.more { -webkit-mask-image: linear-gradient(180deg, #000 85%, transparent); mask-image: linear-gradient(180deg, #000 85%, transparent); padding-bottom: 18px; }
+.hq-update { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 350;
+  background: #e8f84a; color: #1a0633; border: none; border-radius: 999px; padding: 12px 18px; font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 1.5px; font-size: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.45); white-space: nowrap; }
+.hq-update b { font-weight: 400; margin-right: 4px; }
 .menu-ver { text-align: center; font-size: 12px; color: #9684b8; padding: 6px 0 2px; }
 /* Disciplines editor */
 .disc-h { font-family: 'Bebas Neue', sans-serif; letter-spacing: 2px; font-size: 13px; color: #9684b8; margin: 14px 0 6px; }
@@ -2527,7 +2531,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "2.5";
+const APP_VERSION = "2.6";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -3298,8 +3302,8 @@ function saveDrinkSettings() { lsSet(DRINK_SETTINGS_KEY, daily.dset); }
 // ---- date + number helpers ----
 function addDaysISO(iso, n) { const d = parseLocalISO(iso); d.setDate(d.getDate() + n); return localISO(d); }
 function daysBetweenISO(a, b) { return Math.round((parseLocalISO(b) - parseLocalISO(a)) / 86400000); }
-function fmtKg(v, dp = 1) { return v == null || isNaN(v) ? "–" : Number(v).toFixed(dp); }
-function fmtSigned(v, dp = 1) {
+function fmtKg(v, dp = 2) { return v == null || isNaN(v) ? "–" : Number(v).toFixed(dp); }
+function fmtSigned(v, dp = 2) {
   if (v == null || isNaN(v)) return "–";
   const r = Math.round(v * Math.pow(10, dp)) / Math.pow(10, dp);
   if (r === 0) return (0).toFixed(dp);
@@ -3308,6 +3312,7 @@ function fmtSigned(v, dp = 1) {
 function shortDate(iso) { return parseLocalISO(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short" }); }
 function fmtDay(iso) { return parseLocalISO(iso).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" }).toUpperCase(); }
 function round1(v) { return Math.round(v * 10) / 10; }
+function round2(v) { return Math.round(v * 100) / 100; }
 
 // ---- weight maths ----
 // Mean of weigh-ins in the 7 days ending on `iso` (inclusive).
@@ -3398,7 +3403,7 @@ async function weightNotify(title, body) {
 function saveWeightEntry(dateISO, kg) {
   const before = weightStatus().state;
   if (kg == null) delete daily.weights[dateISO];
-  else daily.weights[dateISO] = round1(kg);
+  else daily.weights[dateISO] = round2(kg);
   saveWeights();
   const ws = weightStatus();
   // Keep TRACKR's calorie maths on the current 7-day avg.
@@ -3461,7 +3466,7 @@ function renderWeightGauge(ws) {
         <div class="w-mid-tick"></div>
         ${pos == null ? "" : `<div class="w-marker" style="left:${pos}%;background:${col}"></div>`}
       </div>
-      <div class="w-scale"><span>−${fmtKg(span)}</span><span>${fmtKg(s.baseline)}${v == null ? "" : " · " + fmtSigned(v)}</span><span>+${fmtKg(span)}</span></div>
+      <div class="w-scale"><span>−${fmtKg(span, 1)}</span><span>${fmtKg(s.baseline)}${v == null ? "" : " · " + fmtSigned(v)}</span><span>+${fmtKg(span, 1)}</span></div>
     </div>`;
   }
   return "";
@@ -3523,7 +3528,7 @@ function renderWeightChart(days, compact) {
   if (compact) return svg;
   let leg = `<span><i class="dot" style="background:${WCOL.dot}"></i>DAILY</span><span><i style="border-color:${WCOL.avg}"></i>7-DAY AVG</span>${tr ? `<span><i class="dash" style="border-color:${WCOL.trend}"></i>TREND</span>` : ""}`;
   if (s.mode === "goal" && typeof s.goal === "number") leg += `<span><i class="dash" style="border-color:${WCOL.goal}"></i>GOAL</span>`;
-  if (s.mode === "maintain" && typeof s.baseline === "number") leg += `<span><i class="band" style="background:rgba(163,230,53,0.3)"></i>±${fmtKg(s.band)} BAND</span>`;
+  if (s.mode === "maintain" && typeof s.baseline === "number") leg += `<span><i class="band" style="background:rgba(163,230,53,0.3)"></i>±${fmtKg(s.band, 1)} BAND</span>`;
   return svg + `<div class="w-legend">${leg}</div>`;
 }
 
@@ -3541,7 +3546,7 @@ function renderTodayWeightCard() {
   return `<div class="dcard">
     <div class="dcard-h"><button class="dcard-link" data-view="weight">⚖️ WEIGHT<i>›</i></button>${chip}</div>
     <div class="w-entry">
-      <input class="input w-input" id="wTodayInput" type="number" inputmode="decimal" step="0.1" min="30" max="250" placeholder="KG TODAY" value="${tw != null ? tw : ""}">
+      <input class="input w-input" id="wTodayInput" type="number" inputmode="decimal" step="0.01" min="30" max="250" placeholder="KG TODAY" value="${tw != null ? tw : ""}">
       <button class="w-save ${tw != null ? "done" : ""}" data-w-save-today>${tw != null ? "✓ SAVED" : "SAVE"}</button>
     </div>
     <div class="w-stats">
@@ -3733,14 +3738,14 @@ function renderWeightView() {
     <div class="dcard-h"><span>LOG OR EDIT A DAY</span></div>
     <div class="w-entry">
       <input class="input w-date" type="date" id="wDateInput" value="${d}" max="${todayISO()}">
-      <input class="input w-input" id="wDateKg" type="number" inputmode="decimal" step="0.1" placeholder="KG" value="${ex != null ? ex : ""}">
+      <input class="input w-input" id="wDateKg" type="number" inputmode="decimal" step="0.01" placeholder="KG" value="${ex != null ? ex : ""}">
       <button class="w-save" data-w-save-date>SAVE</button>
     </div>
     ${list ? `<div class="w-list">${list}</div>` : ""}
   </div>`;
 
   const modes = [["off", "OFF"], ["goal", "GOAL"], ["maintain", "MAINTAIN"]].map(([m, l]) => `<button class="range-btn ${s.mode === m ? "active" : ""}" data-w-mode="${m}">${l}</button>`).join("");
-  const kgIn = (key, val) => `<input class="input ds-num w" type="number" inputmode="decimal" step="0.1" data-w-set="${key}" value="${val != null ? val : ""}">`;
+  const kgIn = (key, val) => `<input class="input ds-num w" type="number" inputmode="decimal" step="0.01" data-w-set="${key}" value="${val != null ? val : ""}">`;
   let fields = "";
   if (s.mode === "goal") {
     fields = `<div class="ds-row"><span>🎯 Goal</span><div class="ds-in">${kgIn("goal", s.goal)} kg</div></div>
@@ -3815,7 +3820,7 @@ function attachDailyHandlers() {
   // weight: mode + settings
   on("[data-w-mode]", "click", el => {
     const s = daily.wset, cur = weightAvg(todayISO()), latest = firstWeightDate() ? daily.weights[Object.keys(daily.weights).sort().pop()] : null;
-    const now = cur ? round1(cur.avg) : latest;
+    const now = cur ? round2(cur.avg) : latest;
     s.mode = el.dataset.wMode;
     if (s.mode === "goal" && s.start == null && now != null) s.start = now;
     if (s.mode === "maintain" && s.baseline == null && now != null) { s.baseline = now; s.baselineDate = todayISO(); }
@@ -3825,21 +3830,21 @@ function attachDailyHandlers() {
     const k = el.dataset.wSet, v = parseFloat(String(el.value).replace(",", "."));
     const s = daily.wset;
     if (!isFinite(v)) { if (k !== "band") s[k] = null; }
-    else if (k === "band") s.band = Math.max(0.3, Math.min(5, round1(v)));
-    else if (v >= 30 && v <= 250) s[k] = round1(v);
+    else if (k === "band") s.band = Math.max(0.3, Math.min(5, round2(v)));
+    else if (v >= 30 && v <= 250) s[k] = round2(v);
     else { showToast("Enter a weight in kg"); render(); return; }
     if (k === "baseline") s.baselineDate = todayISO();   // a new baseline starts a fresh alert history
     saveWeightSettings(); updateWeightBadge(); render();
   });
   on("[data-w-baseline-now]", "click", () => {
     const cur = weightAvg(todayISO()); if (!cur) return;
-    Object.assign(daily.wset, { baseline: round1(cur.avg), baselineDate: todayISO() });
+    Object.assign(daily.wset, { baseline: round2(cur.avg), baselineDate: todayISO() });
     saveWeightSettings(); updateWeightBadge(); render(); showToast(`Baseline ${fmtKg(cur.avg)} kg`);
   });
   on("[data-w-maintain-now]", "click", (el, e) => {
     e.stopPropagation();
     const cur = weightAvg(todayISO()); if (!cur) return;
-    Object.assign(daily.wset, { mode: "maintain", baseline: round1(cur.avg), baselineDate: todayISO() });
+    Object.assign(daily.wset, { mode: "maintain", baseline: round2(cur.avg), baselineDate: todayISO() });
     saveWeightSettings(); updateWeightBadge(); state.view = "weight"; render(); showToast(`Maintaining ${fmtKg(cur.avg)} kg`);
   });
   on("[data-w-perm]", "click", async () => {
@@ -4381,16 +4386,54 @@ const CHEERS = [
   "Mate. MATE. Unreal.",
 ];
 const CHEER_EMOJI = ["🔥", "💪", "🏆", "🚀", "⚡", "👊", "🥇", "😤"];
-function nextCheer() {
-  let bag = lsGet("hq:cheer-bag", []);
-  if (!Array.isArray(bag) || !bag.length || bag.some(i => i >= CHEERS.length)) {
-    bag = CHEERS.map((_, i) => i);
+// One deck per training type; about 1 in 3 pop-ups still come from the generic deck.
+const CHEER_DECKS = {
+  Swim: ["Open water? Bring it on.", "Fish are taking notes.", "Chlorine is the new cologne.", "Lap after lap. Absolute machine.",
+    "Michael Phelps just felt a chill.", "Gills: pending.", "Smashed it, and didn't drown. Winning.", "Stroke after stroke. Relentless.",
+    "Pool's still recovering from that.", "Wet hair, dry excuses."],
+  Run: ["Those legs are getting dangerous.", "Kilometres in the bank. Interest compounding.", "Mileage machine.", "Heart, lungs, legs: all upgraded.",
+    "Outran your excuses again.", "Forrest who?", "The footpath called. It's scared of you.", "Pace? Spicy.",
+    "Every km counts. You're counting a lot.", "Run done. Smugness: earned."],
+  Strength: ["Gravity just lodged a complaint.", "Iron: lifted. Ego: also lifted.", "Muscles under construction.", "Heavy things moved. Respect.",
+    "Tomorrow's stairs will remember this.", "That's some quality grunt work.", "Sleeves are now optional.", "Strong like a Bunnings trolley.",
+    "Reps in, gains pending.", "You lift, therefore you are."],
+  Active: ["That had some serious grunt.", "Absolutely cooked it.", "Sweat level: sauna.", "Engine room fully stoked.",
+    "Heart rate said hello.", "Proper hard yakka, that.", "Absolutely full noise.", "Lungs: tested. Legend: confirmed.",
+    "That's how you earn dinner.", "Cardio? Conquered."],
+  Chilled: ["Steps banked. Brain cleared.", "Easy does it. Still counts.", "A walk a day keeps the grumps away.", "Fresh air: inhaled. Vibes: restored.",
+    "Low key, high value.", "Gentle legend behaviour.", "Strolled like a champion.", "Recovery is training too.",
+    "Good for the legs, better for the head.", "Movement is movement. Nailed it."],
+  Walk: ["Steps banked. Legend.", "Pounded that pavement.", "Walk done. Legs approve.", "Kilometres earned, one stride at a time.",
+    "Step count: elite.", "Strong legs, big lungs, great walk.", "That's a proper walk.", "Feet: worked. Attitude: unstoppable.",
+    "Walking the talk.", "Out there doing the work."],
+  Stretch: ["Bendy legend.", "Hamstrings send their thanks.", "Future you won't creak as much.", "Loose as a goose.",
+    "Flexibility: unlocked.", "Every muscle says cheers.", "Ten more years of tying your shoes.", "Yoga people would be proud.",
+    "Stretch done. Smooth operator.", "Range of motion: upgraded."],
+  Mind: ["Core of steel.", "Zen and strong. Unfair combo.", "Bendy and bulletproof.", "Breathe in confidence, breathe out legend.",
+    "Posture: immaculate.", "That's some serious control.", "Namaste, champion.", "Strong, calm and slightly smug.",
+    "Muscles you didn't know existed: activated.", "Balance: found. Mic: dropped."],
+  Cycle: ["Legs spinning like a washing machine.", "Tour de You.", "Kilometres on wheels. Still count.", "Saddle sore and proud.",
+    "Lycra optional, legend mandatory.", "Pedal power: maximum.", "Cadence on point.", "Hills feared you today.",
+    "Wheelie good effort.", "Cooked those quads."],
+};
+const CHEER_DECK_FOR = { Pilates: "Mind", Yoga: "Mind" };
+function drawFromDeck(name, lines) {
+  const bagKey = "hq:cheer-bag:" + name, lastKey = "hq:cheer-last:" + name;
+  let bag = lsGet(bagKey, []);
+  if (!Array.isArray(bag) || !bag.length || bag.some(i => i >= lines.length)) {
+    bag = lines.map((_, i) => i);
     for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }
-    const last = lsGet("hq:cheer-last", -1);
+    const last = lsGet(lastKey, -1);
     if (bag[0] === last) [bag[0], bag[bag.length - 1]] = [bag[bag.length - 1], bag[0]];
   }
-  const i = bag.shift(); lsSet("hq:cheer-bag", bag); lsSet("hq:cheer-last", i);
-  return CHEERS[i];
+  const i = bag.shift(); lsSet(bagKey, bag); lsSet(lastKey, i);
+  return lines[i];
+}
+function nextCheer(discipline) {
+  const deckName = CHEER_DECK_FOR[discipline] || discipline;
+  const deck = CHEER_DECKS[deckName];
+  if (deck && Math.random() >= 1 / 3) return drawFromDeck(deckName, deck);
+  return drawFromDeck("generic", CHEERS);
 }
 let cheerTimer = null;
 function celebrate(discipline, detail) {
@@ -4398,7 +4441,7 @@ function celebrate(discipline, detail) {
     document.querySelector(".cheer")?.remove();
     clearTimeout(cheerTimer);
     const name = discipline ? String(discipline).toLowerCase() : "session";
-    const line = nextCheer().replace("{d}", name);
+    const line = nextCheer(discipline).replace("{d}", name);
     const emoji = CHEER_EMOJI[Math.floor(Math.random() * CHEER_EMOJI.length)];
     const cfg = DISCIPLINE_CONFIG[discipline] || {};
     const el = document.createElement("div");
@@ -4414,6 +4457,48 @@ function celebrate(discipline, detail) {
     cheerTimer = setTimeout(() => { el.classList.add("out"); setTimeout(() => el.remove(), 250); }, 2600);
   } catch (e) {}
 }
+
+// ---------- New-version check ----------
+// iPhone often resumes HQ from memory instead of reloading it, so check for a
+// newer version whenever HQ comes back to the front (and once on open).
+// Reload straight away unless you're mid-entry; then show a tap-to-update banner.
+let lastUpdateCheck = 0;
+function hqIsBusy() {
+  const a = document.activeElement;
+  if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return true;
+  if (document.querySelector(".td-overlay, .menu-sheet.open, .workout-sheet.open")) return true;
+  const reach = document.getElementById("reachOverlay");
+  if (reach && reach.style.display && reach.style.display !== "none") return true;
+  return !!(state.workoutTimer || state.customTimer || state.editingId);
+}
+function showUpdateBanner(v) {
+  if (document.getElementById("hqUpdate")) return;
+  const b = document.createElement("button");
+  b.id = "hqUpdate"; b.className = "hq-update";
+  b.innerHTML = `<b>NEW VERSION</b> v${escapeHtml(v)} · tap to update`;
+  b.addEventListener("click", () => location.reload());
+  document.body.appendChild(b);
+}
+async function checkForUpdate(force) {
+  if (!navigator.onLine) return;
+  const now = Date.now();
+  if (!force && now - lastUpdateCheck < 60000) return;
+  lastUpdateCheck = now;
+  try {
+    const res = await fetch("./version.json?t=" + now, { cache: "no-store" });
+    if (!res.ok) return;
+    const v = String((await res.json()).version || "");
+    if (!v || v === APP_VERSION) return;
+    // Reload at most once per new version, so a slow network can't cause a loop.
+    let tried = ""; try { tried = sessionStorage.getItem("hq-reloaded-for") || ""; } catch (e) {}
+    if (hqIsBusy() || tried === v) { showUpdateBanner(v); }
+    else { try { sessionStorage.setItem("hq-reloaded-for", v); } catch (e) {} location.reload(); }
+    navigator.serviceWorker?.getRegistration().then(r => r && r.update()).catch(() => {});
+  } catch (e) {}
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkForUpdate(false); });
+window.addEventListener("pageshow", e => { if (e.persisted) checkForUpdate(true); });
+setTimeout(() => checkForUpdate(true), 4000);
 
 // ---------- Render ----------
 function render() {
@@ -6757,7 +6842,7 @@ updateWeightBadge();
 // been opened at least once on the network. Quiet failure if unsupported.
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch(err => console.warn("SW reg failed", err));
+    navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(err => console.warn("SW reg failed", err));
   });
 }
 
