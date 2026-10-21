@@ -2196,6 +2196,52 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
 @keyframes cheerFade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes cheerWiggle { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-14deg) scale(1.15); } 75% { transform: rotate(10deg) scale(1.1); } }
 @media (prefers-reduced-motion: reduce) { .cheer-card, .cheer-emoji, .cheer { animation: none; } }
+/* v2.7 */
+.w-li { grid-template-columns: 1fr auto auto auto 24px; gap: 6px; font-size: 13px; }
+.w-li > span { white-space: nowrap; }
+.dcard-h .r { white-space: nowrap; }
+.w-li .wd { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-left: 7px; vertical-align: 1px; background: rgba(255,255,255,0.14); }
+.w-li .wa { font-size: 11.5px; color: #e8f84a; opacity: 0.85; text-align: right; }
+.w-key { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 10px; font-size: 11px; letter-spacing: 1px; color: #9684b8; }
+.w-key i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+.w-chart { touch-action: pan-y; }
+.w-chart .wl { font-size: 11.5px; font-family: 'DM Sans', sans-serif; font-weight: 700; paint-order: stroke; stroke: #1a0633; stroke-width: 3px; }
+.w-chart .wl.avg { fill: #e8f84a; } .w-chart .wl.ext { fill: #f0e6ff; }
+.w-readout { min-height: 18px; margin-top: 8px; font-size: 13px; color: #9684b8; text-align: center; letter-spacing: 0.5px; }
+.w-readout b { color: #fff; } .w-readout em { color: #e8f84a; font-style: normal; }
+.w-ring-row { display: flex; align-items: center; gap: 16px; margin-top: 14px; }
+.w-ring { width: 84px; height: 84px; flex: none; }
+.w-ring .bg { stroke: rgba(255,255,255,0.08); }
+.w-ring .fg { transition: stroke-dashoffset 0.9s ease-out; }
+.w-ring text { font-family: 'Bebas Neue', sans-serif; fill: #fff; letter-spacing: 1px; }
+.w-ring-txt .big { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 1px; color: #fff; line-height: 1; }
+.w-ring-txt .sm { font-size: 12px; letter-spacing: 1px; color: #9684b8; margin-top: 6px; }
+.streak { color: #fb923c; margin-right: 8px; }
+.dry-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; }
+.dry-stat { background: rgba(255,255,255,0.04); border-radius: 12px; padding: 12px; }
+.dry-stat .big { font-family: 'Bebas Neue', sans-serif; font-size: 34px; color: #a3e635; line-height: 1; letter-spacing: 1px; }
+.dry-stat .big.fl { color: #fb923c; }
+.dry-stat .arrow { font-size: 17px; margin-left: 6px; color: #9684b8; }
+.dry-stat .arrow.up { color: #a3e635; } .dry-stat .arrow.down { color: #f43f5e; }
+.dry-stat .lbl { font-size: 11px; letter-spacing: 1.2px; color: #9684b8; margin-top: 6px; line-height: 1.35; }
+.plan-today.done:not(.extra) { box-shadow: 0 0 16px -2px var(--c), 0 0 0 1px var(--c); }
+.cheer-card.big { padding-top: 34px; padding-bottom: 34px; }
+.cheer-card.big .cheer-line { font-size: 46px; }
+.cheer-card.big .cheer-emoji { font-size: 76px; }
+.confetti { position: fixed; inset: 0; pointer-events: none; z-index: 450; overflow: hidden; }
+.confetti i { position: absolute; top: -16px; border-radius: 2px; animation: confFall var(--d) cubic-bezier(.25,.6,.4,1) var(--delay) forwards; }
+@keyframes confFall { to { transform: translate(var(--x), 110vh) rotate(var(--r)); } }
+.section.anim > * { animation: cardIn 0.34s cubic-bezier(.2,.8,.2,1) backwards; }
+.section.anim > *:nth-child(2) { animation-delay: 0.04s; } .section.anim > *:nth-child(3) { animation-delay: 0.08s; }
+.section.anim > *:nth-child(4) { animation-delay: 0.12s; } .section.anim > *:nth-child(n+5) { animation-delay: 0.16s; }
+@keyframes cardIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.drink-btn, .drink-num, .plan-today, .save-btn, .w-save, .range-btn, .tab, .launch-btn, .dcard-link, .ghost-btn, .menu-item, .dc-d, .td-check { transition: transform 0.12s ease; }
+.drink-btn:active, .drink-num:active, .plan-today:active, .save-btn:active, .w-save:active, .range-btn:active, .tab:active, .launch-btn:active, .dcard-link:active, .ghost-btn:active, .menu-item:active, .dc-d:active, .td-check:active { transform: scale(0.94); }
+@media (prefers-reduced-motion: reduce) {
+  .section.anim > * { animation: none; }
+  .confetti { display: none; }
+  .drink-btn:active, .drink-num:active, .plan-today:active, .save-btn:active, .w-save:active, .range-btn:active, .tab:active, .launch-btn:active, .dcard-link:active, .ghost-btn:active, .menu-item:active, .dc-d:active, .td-check:active { transform: none; }
+}
 </style>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -2213,7 +2259,6 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
       <button class="menu-item" id="importBtn"><span class="menu-icon">⬆</span>Import backup (JSON)</button>
       <button class="menu-item" id="importAppleBtn"><span class="menu-icon">⌚</span>Import from Apple Health</button>
       <button class="menu-item" id="restoreBtn"><span class="menu-icon">🛟</span>Recent backups</button>
-      <button class="menu-item" id="exportCsvBtn"><span class="menu-icon">📊</span>Export as CSV</button>
       <button class="menu-item danger" id="clearBtn"><span class="menu-icon">🗑</span>Clear all data</button>
     </div>
     <button class="menu-item" id="closeMenuBtn" style="color:#666; justify-content:center;">Cancel</button>
@@ -2228,6 +2273,15 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
     <div class="workout-card-note" style="color:#d4baeb; margin-bottom:12px;">In-device snapshots, taken once a week automatically. These survive a Clear-All-Data, but not phone loss — use the BACK UP banner for that.</div>
     <div id="restoreContent"></div>
     <button class="menu-item" id="closeRestoreBtn" style="color:#666; justify-content:center; margin-top:8px;">Close</button>
+  </div>
+</div>
+<div class="workout-sheet" id="bwSheet">
+  <div class="workout-sheet-inner">
+    <div class="menu-handle"></div>
+    <div class="workout-title">Bodyweight</div>
+    <div class="workout-card-note" style="color:#d4baeb;margin-bottom:12px;">Used for workout calorie estimates.</div>
+    <div id="bwContent"></div>
+    <button class="menu-item" id="closeBwBtn" style="color:#666; justify-content:center; margin-top:8px;">Done</button>
   </div>
 </div>
 <div class="workout-sheet" id="discSheet">
@@ -2531,7 +2585,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "2.6";
+const APP_VERSION = "2.7";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -3036,6 +3090,8 @@ function loadSettings() {
     if (raw) {
       const s = JSON.parse(raw);
       if (s.weight) state.weight = Number(s.weight);
+      state.bwMode = s.bwMode === "manual" ? "manual" : "auto";
+      state.bwManual = Number(s.bwManual) || Number(s.weight) || null;
       if (s.height) state.height = Number(s.height);
       if (s.lastBackup) state.lastBackup = s.lastBackup;
       if (s.customTimerSettings) state.customTimerSettings = { ...state.customTimerSettings, ...s.customTimerSettings };
@@ -3046,6 +3102,7 @@ function saveSettings() {
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({
       weight: state.weight, height: state.height, lastBackup: state.lastBackup,
+      bwMode: state.bwMode || "auto", bwManual: state.bwManual || null,
       customTimerSettings: state.customTimerSettings,
     }));
   } catch (e) { console.warn("Save settings failed", e); }
@@ -3407,7 +3464,7 @@ function saveWeightEntry(dateISO, kg) {
   saveWeights();
   const ws = weightStatus();
   // Keep TRACKR's calorie maths on the current 7-day avg.
-  if (ws.cur) { state.weight = round1(ws.cur.avg); saveSettings(); }
+  syncBodyweight();
   if (ws.state !== before && daily.wset.mode === "maintain") {
     if (ws.state === "over") {
       showToast("7-day avg " + fmtSigned(ws.diff) + " kg — start counting");
@@ -3421,6 +3478,7 @@ function saveWeightEntry(dateISO, kg) {
   } else {
     showToast(kg == null ? "Weigh-in deleted" : `Saved ${fmtKg(kg)} kg`);
   }
+  if (kg != null) checkMilestones();
   updateWeightBadge();
   render();
 }
@@ -3524,12 +3582,46 @@ function renderWeightChart(days, compact) {
   if (!compact) {
     [from, t].forEach((d, i) => { xl += `<text class="wt" x="${X(d)}" y="${H - 5}" text-anchor="${i ? "middle" : "start"}">${shortDate(d)}</text>`; });
   }
-  const svg = `<svg class="w-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Weight chart">${g}${ref}${dots}${line}${trend}${xl}</svg>`;
+  let lab = "";
+  if (!compact) {
+    const anchor = k => X(k) < pl + 40 ? "start" : X(k) > W - pr - 40 ? "end" : "middle";
+    if (pts.length >= 3) {
+      let mn = pts[0], mx = pts[0];
+      pts.forEach(p => { if (p[1] <= mn[1]) mn = p; if (p[1] >= mx[1]) mx = p; });
+      lab += `<text class="wl ext" x="${X(mx[0])}" y="${Y(mx[1]) - 8}" text-anchor="${anchor(mx[0])}">▲ ${fmtKg(mx[1])}</text>`;
+      lab += `<text class="wl ext" x="${X(mn[0])}" y="${Y(mn[1]) + 17}" text-anchor="${anchor(mn[0])}">▼ ${fmtKg(mn[1])}</text>`;
+    }
+    if (avg.length > 1) {
+      const a0 = avg[0], a1 = avg[avg.length - 1];
+      lab += `<text class="wl avg" x="${X(a0[0]) + 2}" y="${Y(a0[1]) + 17}" text-anchor="start">${fmtKg(a0[1])}</text>`;
+      lab += `<text class="wl avg" x="${X(a1[0])}" y="${Y(a1[1]) - 9}" text-anchor="${anchor(a1[0])}">${fmtKg(a1[1])}</text>`;
+    }
+    wChartPts = pts.map(([k, w]) => ({ k, w, a: weightAvg(k).avg, x: X(k), y: Y(w) }));
+    wChartW = W;
+  }
+  const hiDot = compact ? "" : `<circle id="wHi" cx="-50" cy="-50" r="6" fill="none" stroke="#fff" stroke-width="2"/>`;
+  const svg = `<svg class="w-chart" ${compact ? "" : `id="wChart"`} viewBox="0 0 ${W} ${H}" role="img" aria-label="Weight chart">${g}${ref}${dots}${line}${trend}${xl}${lab}${hiDot}</svg>`;
   if (compact) return svg;
   let leg = `<span><i class="dot" style="background:${WCOL.dot}"></i>DAILY</span><span><i style="border-color:${WCOL.avg}"></i>7-DAY AVG</span>${tr ? `<span><i class="dash" style="border-color:${WCOL.trend}"></i>TREND</span>` : ""}`;
   if (s.mode === "goal" && typeof s.goal === "number") leg += `<span><i class="dash" style="border-color:${WCOL.goal}"></i>GOAL</span>`;
   if (s.mode === "maintain" && typeof s.baseline === "number") leg += `<span><i class="band" style="background:rgba(163,230,53,0.3)"></i>±${fmtKg(s.band, 1)} BAND</span>`;
-  return svg + `<div class="w-legend">${leg}</div>`;
+  const last = wChartPts[wChartPts.length - 1];
+  return svg + `<div class="w-readout" id="wReadout">${last ? wReadoutHTML(last, true) : ""}</div><div class="w-legend">${leg}</div>`;
+}
+let wChartPts = [], wChartW = 440;
+function wReadoutHTML(p, latest) {
+  return `${latest ? "LATEST · " : ""}<b>${fmtDay(p.k)} · ${fmtKg(p.w)} KG</b> · <em>AVG ${fmtKg(p.a)}</em>${latest ? " · TAP THE CHART" : ""}`;
+}
+function wChartPick(svg, clientX) {
+  if (!wChartPts.length) return;
+  const r = svg.getBoundingClientRect();
+  const x = (clientX - r.left) / r.width * wChartW;
+  let best = wChartPts[0];
+  wChartPts.forEach(p => { if (Math.abs(p.x - x) < Math.abs(best.x - x)) best = p; });
+  const hi = svg.querySelector("#wHi");
+  if (hi) { hi.setAttribute("cx", best.x); hi.setAttribute("cy", best.y); }
+  const out = document.getElementById("wReadout");
+  if (out) out.innerHTML = wReadoutHTML(best, false);
 }
 
 // ---- TODAY ----
@@ -3554,7 +3646,22 @@ function renderTodayWeightCard() {
       <div class="w-stat"><div class="w-mid ${dCls}">${dTxt}</div><div class="w-lbl">VS LAST WEEK</div></div>
       <div class="w-stat"><div class="w-mid">${ws.trend ? fmtSigned(ws.trend.perWeek, 2) : "–"}</div><div class="w-lbl">KG/WK TREND</div></div>
     </div>
-    ${renderWeightGauge(ws)}
+    ${renderWeightRing(ws)}
+  </div>`;
+}
+function renderWeightRing(ws) {
+  const s = daily.wset;
+  if (!(s.mode === "goal" && typeof s.goal === "number" && ws.cur && ws.start != null)) return renderWeightGauge(ws);
+  const p = Math.max(0, Math.min(1, ws.progress || 0)), pct = Math.round(p * 100);
+  const R = 34, C = 2 * Math.PI * R;
+  return `<div class="w-ring-row">
+    <svg class="w-ring" viewBox="0 0 84 84" aria-label="${pct}% to goal">
+      <defs><linearGradient id="wRingG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#e8f84a"/></linearGradient></defs>
+      <circle class="bg" cx="42" cy="42" r="${R}" fill="none" stroke-width="9"/>
+      <circle class="fg" cx="42" cy="42" r="${R}" fill="none" stroke="url(#wRingG)" stroke-width="9" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - p)).toFixed(1)}" transform="rotate(-90 42 42)"/>
+      <text x="42" y="51" text-anchor="middle" font-size="25">${ws.reached ? "🎯" : pct + "%"}</text>
+    </svg>
+    <div class="w-ring-txt"><div class="big">${ws.reached ? "GOAL REACHED" : fmtKg(Math.max(0, ws.toGo)) + " KG TO GO"}</div><div class="sm">${fmtKg(ws.start)} → 🎯 ${fmtKg(s.goal)}</div></div>
   </div>`;
 }
 function sessionMinutes(s) { const m = parseFloat(s.data && s.data.duration); return isFinite(m) && m > 0 ? m : 0; }
@@ -3592,7 +3699,7 @@ function renderTodayTrainCard() {
       <div class="tw-lbl">${letters[i]}</div></div>`).join("");
   const hrs = (weekMin / 60).toFixed(1);
   return `<div class="dcard">
-    <div class="dcard-h"><button class="dcard-link" data-view="log">🏋️ TRAIN TODAY<i>›</i></button><span class="r">${hrs} H THIS WEEK</span></div>
+    <div class="dcard-h"><button class="dcard-link" data-view="log">🏋️ TRAIN TODAY<i>›</i></button><span class="r">${(st => st >= 2 ? `<span class="streak">🔥${st}</span>` : "")(trainStreak())}${hrs} H THIS WEEK</span></div>
     ${chips ? `<div class="plan-today-row">${chips}</div>` : `<div class="plan-rest">REST DAY</div>`}
     <div class="tw-week">${bars}</div>
     <button class="save-btn log-cta" data-view="log">+ LOG SESSION</button>
@@ -3601,7 +3708,7 @@ function renderTodayTrainCard() {
 function renderTodayDrinkCard() {
   const t = todayISO(), v = daily.drink[t], c = daily.counts[t];
   return `<div class="dcard">
-    <div class="dcard-h"><button class="dcard-link" data-view="drink">🍷 DRINK<i>›</i></button><span class="r">${v ? DRINK_NAMES[v] + (c && v !== "none" ? " · " + c : "") : "NOT LOGGED"}</span></div>
+    <div class="dcard-h"><button class="dcard-link" data-view="drink">🍷 DRINK<i>›</i></button><span class="r">${(st => st >= 2 ? `<span class="streak">🔥 ${st} DRY</span>` : "")(dryStreak())}${v ? DRINK_NAMES[v] + (c && v !== "none" ? " · " + c : "") : "NOT LOGGED"}</span></div>
     ${renderDrinkButtons(t)}
   </div>`;
 }
@@ -3642,7 +3749,41 @@ function renderDrinkView() {
     </div>
     ${renderDrinkButtons(d)}
   </div>`;
-  return dayCard + renderDrinkCalendar() + renderDrinkMonths() + renderDrinkSettings();
+  return dayCard + renderDryTrend() + renderDrinkCalendar() + renderDrinkMonths() + renderDrinkSettings();
+}
+function renderDryTrend() {
+  const now = new Date(), mk = todayISO().slice(0, 7);
+  const prev = localISO(new Date(now.getFullYear(), now.getMonth() - 1, 1)).slice(0, 7);
+  const pct = m => {
+    let n = 0, dry = 0;
+    for (const k in daily.drink) if (k.slice(0, 7) === m) { n++; if (daily.drink[k] === "none") dry++; }
+    return n ? { p: Math.round(dry / n * 100), dry, n } : null;
+  };
+  const a = pct(mk), b = pct(prev), st = dryStreak();
+  if (!a && !b) return "";
+  const mon = m => new Date(+m.slice(0, 4), +m.slice(5, 7) - 1, 1).toLocaleDateString("en-AU", { month: "short" }).toUpperCase();
+  const diff = a && b ? a.p - b.p : null;
+  const arrow = diff == null ? "" : diff > 0 ? `<span class="arrow up">▲ ${diff}</span>` : diff < 0 ? `<span class="arrow down">▼ ${-diff}</span>` : `<span class="arrow">=</span>`;
+  return `<div class="dcard">
+    <div class="dcard-h"><span>💧 DRY DAYS</span><span class="r">${b ? mon(prev) + " " + b.p + "%" : ""}</span></div>
+    <div class="dry-row">
+      <div class="dry-stat"><div class="big">${a ? a.p + "%" : "–"}${arrow}</div><div class="lbl">${mon(mk)} · ${a ? a.dry + " OF " + a.n + " DAYS" : "NONE LOGGED"}${diff != null ? "<br>VS " + mon(prev) + " " + b.p + "%" : ""}</div></div>
+      <div class="dry-stat"><div class="big fl">${st ? "🔥 " + st : "0"}</div><div class="lbl">DRY STREAK</div></div>
+    </div>
+  </div>`;
+}
+function trainStreak() {
+  const days = new Set(state.sessions.map(x => x.date));
+  let d = todayISO(); if (!days.has(d)) d = addDaysISO(d, -1);
+  let n = 0; while (days.has(d)) { n++; d = addDaysISO(d, -1); }
+  return n;
+}
+function dryStreak() {
+  let d = todayISO(), v = daily.drink[d];
+  if (v && v !== "none") return 0;
+  if (!v) d = addDaysISO(d, -1);
+  let n = 0; while (daily.drink[d] === "none") { n++; d = addDaysISO(d, -1); }
+  return n;
 }
 function renderDrinkCalendar() {
   const y = daily.calY, m = daily.calM, t = todayISO(), ds = daily.dset;
@@ -3732,8 +3873,11 @@ function renderWeightView() {
     const prevK = Object.keys(daily.weights).filter(x => x < k).sort().pop();
     const dl = prevK ? daily.weights[k] - daily.weights[prevK] : null;
     const cls = dl == null ? "" : dl > 0.05 ? "up" : dl < -0.05 ? "down" : "";
-    return `<div class="w-li"><span data-w-edit="${k}">${fmtDay(k)}</span><span class="dlt ${cls}">${dl == null ? "" : fmtSigned(dl)}</span><span class="k" data-w-edit="${k}">${fmtKg(daily.weights[k])}</span><button class="w-del" data-w-del="${k}" aria-label="Delete">×</button></div>`;
+    const a = weightAvg(k), pv = daily.drink[addDaysISO(k, -1)];
+    const dot = `<i class="wd" ${pv ? `style="background:${DRINK_COLORS[pv]}"` : ""} title="Day before: ${pv ? DRINK_NAMES[pv] : "not logged"}"></i>`;
+    return `<div class="w-li"><span data-w-edit="${k}">${fmtDay(k)}${dot}</span><span class="dlt ${cls}">${dl == null ? "" : fmtSigned(dl)}</span><span class="k" data-w-edit="${k}">${fmtKg(daily.weights[k])}</span><span class="wa">${a ? "avg " + fmtKg(a.avg) : ""}</span><button class="w-del" data-w-del="${k}" aria-label="Delete">×</button></div>`;
   }).join("");
+  const key = `<div class="w-key"><span>DOT = DRINKS THE DAY BEFORE</span>${["none", "light", "full"].map(x => `<span><i style="background:${DRINK_COLORS[x]}"></i>${DRINK_NAMES[x]}</span>`).join("")}</div>`;
   const entryCard = `<div class="dcard">
     <div class="dcard-h"><span>LOG OR EDIT A DAY</span></div>
     <div class="w-entry">
@@ -3741,7 +3885,7 @@ function renderWeightView() {
       <input class="input w-input" id="wDateKg" type="number" inputmode="decimal" step="0.01" placeholder="KG" value="${ex != null ? ex : ""}">
       <button class="w-save" data-w-save-date>SAVE</button>
     </div>
-    ${list ? `<div class="w-list">${list}</div>` : ""}
+    ${list ? `<div class="w-list">${list}</div>${key}` : ""}
   </div>`;
 
   const modes = [["off", "OFF"], ["goal", "GOAL"], ["maintain", "MAINTAIN"]].map(([m, l]) => `<button class="range-btn ${s.mode === m ? "active" : ""}" data-w-mode="${m}">${l}</button>`).join("");
@@ -3866,7 +4010,20 @@ function attachDailyHandlers() {
   });
 
   // drink
-  on("[data-drink-set]", "click", el => { setDrinkCategory(el.dataset.date, el.dataset.drinkSet); render(); showToast("Saved: " + DRINK_NAMES[el.dataset.drinkSet].toLowerCase()); });
+  on("[data-drink-set]", "click", el => {
+    const k = el.dataset.date, cat = el.dataset.drinkSet, was = daily.drink[k];
+    setDrinkCategory(k, cat); render();
+    if (cat === "none" && was !== "none") {
+      const st = k === todayISO() ? dryStreak() : 0;
+      showPop({ emoji: ZERO_EMOJI[Math.floor(Math.random() * ZERO_EMOJI.length)], line: drawFromDeck("zero", ZERO_CHEERS), color: DRINK_COLORS.none,
+        sub: "ZERO DAY" + (st >= 2 ? " · 🔥 " + st + " IN A ROW" : "") });
+    } else showToast("Saved: " + DRINK_NAMES[cat].toLowerCase());
+  });
+  const wc = app.querySelector("#wChart");
+  if (wc) {
+    wc.addEventListener("pointerdown", e => wChartPick(wc, e.clientX));
+    wc.addEventListener("pointermove", e => { if (e.buttons || e.pointerType === "mouse") wChartPick(wc, e.clientX); });
+  }
   on("[data-drink-num]", "click", el => { setDrinkCount(el.dataset.date, Number(el.dataset.drinkNum)); render(); });
   on("[data-drink-clear]", "click", el => { delete daily.drink[el.dataset.drinkClear]; delete daily.counts[el.dataset.drinkClear]; saveDrink(); render(); showToast("Cleared"); });
   on("[data-drink-day]", "click", el => {
@@ -3967,7 +4124,7 @@ function importAnyBackup(data) {
       saveDisciplines(); applyDisciplines();
     }
     if (data.todo && Array.isArray(data.todo.all)) { todo.week = data.todo.week || []; todo.all = data.todo.all; todo.notes = data.todo.notes || []; saveTodo(); }
-    const ws = weightStatus(); if (ws.cur) { state.weight = round1(ws.cur.avg); saveSettings(); }
+    syncBodyweight();
     updateWeightBadge(); render(); showToast("Import complete");
     return;
   }
@@ -4436,26 +4593,117 @@ function nextCheer(discipline) {
   return drawFromDeck("generic", CHEERS);
 }
 let cheerTimer = null;
-function celebrate(discipline, detail) {
+// One pop-up for everything: sessions, zero days, weight milestones.
+function showPop({ emoji, line, sub, color, big, ms }) {
   try {
     document.querySelector(".cheer")?.remove();
     clearTimeout(cheerTimer);
-    const name = discipline ? String(discipline).toLowerCase() : "session";
-    const line = nextCheer(discipline).replace("{d}", name);
-    const emoji = CHEER_EMOJI[Math.floor(Math.random() * CHEER_EMOJI.length)];
-    const cfg = DISCIPLINE_CONFIG[discipline] || {};
     const el = document.createElement("div");
     el.className = "cheer";
-    el.innerHTML = `<div class="cheer-card" style="--c:${cfg.color || "#e8f84a"}">
+    el.innerHTML = `<div class="cheer-card ${big ? "big" : ""}" style="--c:${color || "#e8f84a"}">
       <div class="cheer-emoji">${emoji}</div>
       <div class="cheer-line">${escapeHtml(line)}</div>
-      <div class="cheer-sub">${cfg.icon || ""} ${escapeHtml(String(discipline || "").toUpperCase())} LOGGED${detail ? " · " + escapeHtml(detail) : ""}</div>
+      ${sub ? `<div class="cheer-sub">${sub}</div>` : ""}
     </div>`;
     el.addEventListener("click", () => el.remove());
     document.body.appendChild(el);
-    navigator.vibrate?.([30, 40, 60]);
-    cheerTimer = setTimeout(() => { el.classList.add("out"); setTimeout(() => el.remove(), 250); }, 2600);
+    navigator.vibrate?.(big ? [40, 60, 40, 60, 140] : [30, 40, 60]);
+    if (big) confetti();
+    cheerTimer = setTimeout(() => { el.classList.add("out"); setTimeout(() => el.remove(), 250); }, ms || (big ? 4500 : 2600));
   } catch (e) {}
+}
+function confetti() {
+  try {
+    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const cols = ["#e8f84a", "#8b5cf6", "#a3e635", "#fb923c", "#4c7dff", "#f43f5e", "#ffffff"];
+    let h = "";
+    for (let i = 0; i < 80; i++) {
+      h += `<i style="left:${(Math.random() * 100).toFixed(1)}%;width:${6 + Math.floor(Math.random() * 5)}px;height:${8 + Math.floor(Math.random() * 9)}px;background:${cols[i % cols.length]};--x:${Math.round(Math.random() * 180 - 90)}px;--r:${Math.round(Math.random() * 900 - 450)}deg;--d:${(1.8 + Math.random() * 1.5).toFixed(2)}s;--delay:${(Math.random() * 0.5).toFixed(2)}s"></i>`;
+    }
+    const box = document.createElement("div");
+    box.className = "confetti"; box.innerHTML = h;
+    document.body.appendChild(box);
+    setTimeout(() => box.remove(), 4200);
+  } catch (e) {}
+}
+function sessionsThisWeek() {
+  const mon = localISO(mondayOf(parseLocalISO(todayISO()))), sun = addDaysISO(mon, 6);
+  return state.sessions.filter(x => x.date >= mon && x.date <= sun).length;
+}
+function celebrate(discipline, detail) {
+  const name = discipline ? String(discipline).toLowerCase() : "session";
+  const line = nextCheer(discipline).replace("{d}", name);
+  const emoji = CHEER_EMOJI[Math.floor(Math.random() * CHEER_EMOJI.length)];
+  const cfg = DISCIPLINE_CONFIG[discipline] || {};
+  const firstOfWeek = sessionsThisWeek() === 1;
+  const st = trainStreak();
+  showPop({ emoji, line, color: cfg.color,
+    sub: `${cfg.icon || ""} ${escapeHtml(String(discipline || "").toUpperCase())} LOGGED${detail ? " · " + escapeHtml(detail) : ""}${firstOfWeek ? " · FIRST OF THE WEEK" : st >= 2 ? " · 🔥 " + st + " DAYS" : ""}` });
+  if (firstOfWeek) confetti();
+}
+
+const ZERO_EMOJI = ["💧", "🫖", "🌿", "✨", "🥤", "🧊"];
+const ZERO_CHEERS = ["Dry day! Liver's throwing a party.", "Sober as a judge. A happy judge.", "Zero drinks, all the wins.",
+  "Your liver just sent flowers.", "Clear head tomorrow. Smug already.", "Water: 1. Wine: 0.", "Dry and thriving.",
+  "Tomorrow-you says cheers (with tea).", "That's a hangover you'll never have.", "Nothing in the glass, everything in the tank."];
+
+// ---- weight goal milestones: 20 / 50 / 90 / 100%, each once per goal ----
+const W_MILESTONES = [20, 50, 90, 100];
+const MILESTONE_LINES = {
+  20: ["20% there. The scales are noticing.", "A fifth of the way. Momentum unlocked.", "20% down. Keep stacking."],
+  50: ["Halfway, baby!", "50%. Downhill from here, in the best way.", "Half done. The other half's nervous."],
+  90: ["90%. Smell that? Finish line.", "Almost there. Don't you dare stop now.", "Final stretch. Bring it home."],
+};
+function milestoneKey() {
+  const s = daily.wset;
+  return s.mode === "goal" && typeof s.goal === "number" ? s.goal + "|" + (typeof s.start === "number" ? s.start : "") : "";
+}
+function milestonesPassed(ws) {
+  if (!ws.cur || ws.progress == null) return [];
+  const p = ws.reached ? 100 : Math.floor(ws.progress * 100);
+  return W_MILESTONES.filter(m => p >= m);
+}
+// New or changed goal: count what's already passed as done, so nothing fires retrospectively.
+function syncMilestoneKey() {
+  const key = milestoneKey(); if (!key) return;
+  const st = lsGet("hq:w-milestones", {});
+  if (st.key !== key) lsSet("hq:w-milestones", { key, hit: milestonesPassed(weightStatus()) });
+}
+function checkMilestones() {
+  const key = milestoneKey(); if (!key) return;
+  const ws = weightStatus(); if (!ws.cur) return;
+  const st = lsGet("hq:w-milestones", {});
+  const passed = milestonesPassed(ws);
+  if (st.key !== key) { lsSet("hq:w-milestones", { key, hit: passed }); return; }
+  const hit = Array.isArray(st.hit) ? st.hit : [];
+  const fresh = passed.filter(m => !hit.includes(m));
+  lsSet("hq:w-milestones", { key, hit: [...new Set(hit.concat(passed))] });
+  if (!fresh.length) return;
+  const top = Math.max(...fresh);
+  if (top === 100) {
+    showPop({ emoji: "🏆", line: "GOAL SMASHED. You absolute legend.", color: "#e8f84a", big: true,
+      sub: `🎯 ${fmtKg(daily.wset.goal)} KG · 7-DAY AVG ${fmtKg(ws.cur.avg)}` });
+  } else {
+    showPop({ emoji: top === 20 ? "📉" : top === 50 ? "⚡" : "🏁", line: drawFromDeck("w" + top, MILESTONE_LINES[top]), color: "#e8f84a",
+      sub: `${top}% TO GOAL · ${fmtKg(Math.max(0, ws.toGo))} KG TO GO` });
+  }
+}
+
+// ---- bodyweight for calorie maths: Auto (7-day avg) or Manual ----
+function syncBodyweight() {
+  const cur = weightAvg(todayISO());
+  const w = state.bwMode !== "manual" && cur ? round1(cur.avg) : (state.bwManual || state.weight || 94);
+  if (w !== state.weight) { state.weight = w; saveSettings(); }
+}
+function renderBwEditor() {
+  const cur = weightAvg(todayISO()), auto = state.bwMode !== "manual";
+  const btn = (m, l) => `<button class="range-btn ${(m === "auto") === auto ? "active" : ""}" data-bw-mode="${m}">${l}</button>`;
+  const why = auto
+    ? (cur ? `Auto uses your 7-day average.` : `No weigh-ins in the last 7 days, so Auto is using your manual weight.`)
+    : `Manual uses the number below.`;
+  return `<div class="range-toggle mode-toggle">${btn("auto", "AUTO · 7-DAY AVG")}${btn("manual", "MANUAL")}</div>
+    <div class="w-ring-row" style="margin-top:8px"><div class="w-ring-txt"><div class="big">${fmtKg(state.weight, 1)} KG</div><div class="sm">${why}</div></div></div>
+    <div class="ds-row" style="margin-top:12px"><span>Manual weight${auto ? " (fallback)" : ""}</span><div class="ds-in"><input class="input ds-num w" id="bwManualInput" type="number" inputmode="decimal" step="0.1" min="30" max="250" value="${state.bwManual != null ? state.bwManual : ""}"> kg</div></div>`;
 }
 
 // ---------- New-version check ----------
@@ -4501,8 +4749,11 @@ window.addEventListener("pageshow", e => { if (e.persisted) checkForUpdate(true)
 setTimeout(() => checkForUpdate(true), 4000);
 
 // ---------- Render ----------
+let lastRenderedView = null;
 function render() {
   const app = document.getElementById("app");
+  syncMilestoneKey();
+  const anim = state.view !== lastRenderedView; lastRenderedView = state.view;
   const banner = shouldShowBackupBanner() ? renderBackupBanner() : "";
   const workoutOverlay = renderWorkoutOverlay();
   app.innerHTML = workoutOverlay + `
@@ -4525,7 +4776,7 @@ function render() {
     </div>
     ${renderWeightBanner()}
     ${banner}
-    <div class="section">
+    <div class="section${anim ? " anim" : ""}">
       ${renderMainView()}
     </div>
   `;
@@ -6238,7 +6489,8 @@ function attachHandlers() {
   // Menu
   const openMenu = document.getElementById("openMenu");
   if (openMenu) openMenu.addEventListener("click", () => {
-    document.getElementById("weightDisplay").textContent = state.weight + "kg";
+    syncBodyweight();
+    document.getElementById("weightDisplay").textContent = fmtKg(state.weight, 1) + " kg" + (state.bwMode === "manual" ? "" : " · AUTO");
     document.getElementById("menuVer").textContent = "HQ v" + APP_VERSION;
     setBackupGroup(false);
     document.getElementById("menuSheet").classList.add("open");
@@ -6591,26 +6843,31 @@ function setupMenu() {
   attachSheetSwipe(document.getElementById("workoutSheet"), document.querySelector("#workoutSheet .workout-sheet-inner"));
   attachSheetSwipe(document.getElementById("discSheet"), document.querySelector("#discSheet .workout-sheet-inner"));
 
+  const bwSheet = document.getElementById("bwSheet"), bwBox = document.getElementById("bwContent");
   document.getElementById("settingsBtn").addEventListener("click", () => {
-    const newWeight = prompt(`Bodyweight in kg (used for calorie estimates):`, state.weight);
-    if (newWeight !== null) {
-      const w = parseFloat(String(newWeight).replace(",", "."));
-      if (!isNaN(w) && w > 0 && w < 500) {
-        state.weight = w;
-        saveSettings();
-        showToast(`Bodyweight set to ${w}kg`);
-      } else {
-        alert("Please enter a valid weight in kg.");
-      }
-    }
     sheet.classList.remove("open");
+    syncBodyweight();
+    bwBox.innerHTML = renderBwEditor();
+    bwSheet.classList.add("open");
+  });
+  document.getElementById("closeBwBtn").addEventListener("click", () => bwSheet.classList.remove("open"));
+  bwSheet.addEventListener("click", e => { if (e.target === bwSheet) bwSheet.classList.remove("open"); });
+  attachSheetSwipe(bwSheet, bwSheet.querySelector(".workout-sheet-inner"));
+  bwBox.addEventListener("click", e => {
+    const b = e.target.closest("[data-bw-mode]"); if (!b) return;
+    state.bwMode = b.dataset.bwMode; saveSettings(); syncBodyweight();
+    bwBox.innerHTML = renderBwEditor();
+  });
+  bwBox.addEventListener("change", e => {
+    if (e.target.id !== "bwManualInput") return;
+    const w = parseFloat(String(e.target.value).replace(",", "."));
+    if (!(w >= 30 && w <= 250)) { showToast("Enter a weight between 30 and 250 kg"); bwBox.innerHTML = renderBwEditor(); return; }
+    state.bwManual = round1(w); saveSettings(); syncBodyweight();
+    bwBox.innerHTML = renderBwEditor();
+    showToast(`Manual weight ${fmtKg(state.bwManual, 1)} kg`);
   });
   document.getElementById("exportBtn").addEventListener("click", () => {
     download(`hq-backup-${todayISO()}.json`, JSON.stringify(buildFullBackup(), null, 2), "application/json");
-    sheet.classList.remove("open");
-  });
-  document.getElementById("exportCsvBtn").addEventListener("click", () => {
-    download("training-log.csv", toCsv(state.sessions), "text/csv");
     sheet.classList.remove("open");
   });
   document.getElementById("importBtn").addEventListener("click", () => {
@@ -6811,6 +7068,7 @@ document.addEventListener("click", e => {
 // ---------- Boot ----------
 loadSettings();
 loadSessions();
+syncBodyweight();
 maybeTakeSnapshot();
 // Shortcuts trigger: if the URL hash is #export, auto-download then strip
 // the hash so a refresh doesn't fire it again.
