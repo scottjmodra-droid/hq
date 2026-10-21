@@ -2209,6 +2209,13 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
 .w-chart .wl.avg { fill: #e8f84a; } .w-chart .wl.ext { fill: #f0e6ff; }
 .w-readout { min-height: 18px; margin-top: 8px; font-size: 13px; color: #9684b8; text-align: center; letter-spacing: 0.5px; }
 .w-readout b { color: #fff; } .w-readout em { color: #e8f84a; font-style: normal; }
+.w-hero { display: flex; align-items: baseline; gap: 12px; margin-top: 14px; }
+.w-wk { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.5px; color: #fff; }
+.w-wk small { font-size: 13px; letter-spacing: 1.5px; color: #9684b8; }
+.w-wk.up { color: #f43f5e; } .w-wk.down { color: #a3e635; }
+.t-gauge { display: flex; align-items: center; gap: 10px; }
+.t-gauge .w-track { flex: 1; }
+.t-goal { font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 1.2px; color: #c8a8e8; white-space: nowrap; }
 .w-ring-row { display: flex; align-items: center; gap: 16px; margin-top: 14px; }
 .w-ring { width: 84px; height: 84px; flex: none; }
 .w-ring .bg { stroke: rgba(255,255,255,0.08); }
@@ -2585,7 +2592,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "2.7";
+const APP_VERSION = "2.8";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -3585,15 +3592,8 @@ function renderWeightChart(days, compact) {
   let lab = "";
   if (!compact) {
     const anchor = k => X(k) < pl + 40 ? "start" : X(k) > W - pr - 40 ? "end" : "middle";
-    if (pts.length >= 3) {
-      let mn = pts[0], mx = pts[0];
-      pts.forEach(p => { if (p[1] <= mn[1]) mn = p; if (p[1] >= mx[1]) mx = p; });
-      lab += `<text class="wl ext" x="${X(mx[0])}" y="${Y(mx[1]) - 8}" text-anchor="${anchor(mx[0])}">▲ ${fmtKg(mx[1])}</text>`;
-      lab += `<text class="wl ext" x="${X(mn[0])}" y="${Y(mn[1]) + 17}" text-anchor="${anchor(mn[0])}">▼ ${fmtKg(mn[1])}</text>`;
-    }
     if (avg.length > 1) {
-      const a0 = avg[0], a1 = avg[avg.length - 1];
-      lab += `<text class="wl avg" x="${X(a0[0]) + 2}" y="${Y(a0[1]) + 17}" text-anchor="start">${fmtKg(a0[1])}</text>`;
+      const a1 = avg[avg.length - 1];
       lab += `<text class="wl avg" x="${X(a1[0])}" y="${Y(a1[1]) - 9}" text-anchor="${anchor(a1[0])}">${fmtKg(a1[1])}</text>`;
     }
     wChartPts = pts.map(([k, w]) => ({ k, w, a: weightAvg(k).avg, x: X(k), y: Y(w) }));
@@ -3605,8 +3605,7 @@ function renderWeightChart(days, compact) {
   let leg = `<span><i class="dot" style="background:${WCOL.dot}"></i>DAILY</span><span><i style="border-color:${WCOL.avg}"></i>7-DAY AVG</span>${tr ? `<span><i class="dash" style="border-color:${WCOL.trend}"></i>TREND</span>` : ""}`;
   if (s.mode === "goal" && typeof s.goal === "number") leg += `<span><i class="dash" style="border-color:${WCOL.goal}"></i>GOAL</span>`;
   if (s.mode === "maintain" && typeof s.baseline === "number") leg += `<span><i class="band" style="background:rgba(163,230,53,0.3)"></i>±${fmtKg(s.band, 1)} BAND</span>`;
-  const last = wChartPts[wChartPts.length - 1];
-  return svg + `<div class="w-readout" id="wReadout">${last ? wReadoutHTML(last, true) : ""}</div><div class="w-legend">${leg}</div>`;
+  return svg + `<div class="w-readout" id="wReadout">${wChartPts.length ? "TAP FOR ANY DAY" : ""}</div><div class="w-legend">${leg}</div>`;
 }
 let wChartPts = [], wChartW = 440;
 function wReadoutHTML(p, latest) {
@@ -3630,7 +3629,7 @@ function renderToday() {
 }
 function renderTodayWeightCard() {
   const ws = weightStatus(), t = todayISO(), s = daily.wset, tw = daily.weights[t];
-  const chip = s.mode === "goal" && typeof s.goal === "number" ? `<span class="chip-mode">GOAL ${fmtKg(s.goal)}</span>`
+  const chip = s.mode === "goal" && typeof s.goal === "number" ? `<span class="chip-mode">${ws.reached ? "🎯 GOAL REACHED" : ws.toGo != null ? fmtKg(Math.max(0, ws.toGo)) + " KG TO GO" : "GOAL " + fmtKg(s.goal)}</span>`
     : s.mode === "maintain" && typeof s.baseline === "number" ? `<span class="chip-mode">MAINTAIN ${fmtKg(s.baseline)}</span>` : "";
   const wd = ws.weekDelta;
   const dCls = wd == null ? "" : wd > 0.05 ? "up" : wd < -0.05 ? "down" : "";
@@ -3641,12 +3640,21 @@ function renderTodayWeightCard() {
       <input class="input w-input" id="wTodayInput" type="number" inputmode="decimal" step="0.01" min="30" max="250" placeholder="KG TODAY" value="${tw != null ? tw : ""}">
       <button class="w-save ${tw != null ? "done" : ""}" data-w-save-today>${tw != null ? "✓ SAVED" : "SAVE"}</button>
     </div>
-    <div class="w-stats">
-      <div class="w-stat"><div class="w-big">${ws.cur ? fmtKg(ws.cur.avg) : "–"}</div><div class="w-lbl">7-DAY AVG${ws.cur && ws.cur.n < 7 ? ` · ${ws.cur.n}/7` : ""}</div></div>
-      <div class="w-stat"><div class="w-mid ${dCls}">${dTxt}</div><div class="w-lbl">VS LAST WEEK</div></div>
-      <div class="w-stat"><div class="w-mid">${ws.trend ? fmtSigned(ws.trend.perWeek, 2) : "–"}</div><div class="w-lbl">KG/WK TREND</div></div>
+    <div class="w-hero">
+      <div class="w-big">${ws.cur ? fmtKg(ws.cur.avg) : "–"}</div>
+      ${wd == null ? "" : `<div class="w-wk ${dCls}">${dTxt}<small> THIS WEEK</small></div>`}
     </div>
-    ${renderWeightRing(ws)}
+    <div class="w-lbl">7-DAY AVG${ws.cur && ws.cur.n < 7 ? ` · ${ws.cur.n}/7` : ""}</div>
+    ${renderTodayGauge(ws)}
+  </div>`;
+}
+function renderTodayGauge(ws) {
+  const s = daily.wset;
+  if (!(s.mode === "goal" && typeof s.goal === "number" && ws.cur && ws.start != null)) return renderWeightGauge(ws);
+  const pct = Math.round(Math.max(0, Math.min(1, ws.progress || 0)) * 100);
+  return `<div class="w-gauge t-gauge">
+    <div class="w-track"><div class="w-fill" style="width:${pct}%"></div><span class="w-pct">${pct}%</span></div>
+    <span class="t-goal">🎯 ${fmtKg(s.goal)}</span>
   </div>`;
 }
 function renderWeightRing(ws) {
