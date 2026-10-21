@@ -20,6 +20,7 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html, body {
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
   background: #1a0633;
   color: #f0e6ff;
   font-family: 'DM Sans', sans-serif;
@@ -2202,13 +2203,21 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
 .dcard-h .r { white-space: nowrap; }
 .w-li .wd { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-left: 7px; vertical-align: 1px; background: rgba(255,255,255,0.14); }
 .w-li .wa { font-size: 11.5px; color: #e8f84a; opacity: 0.85; text-align: right; }
-.w-key { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 10px; font-size: 11px; letter-spacing: 1px; color: #9684b8; }
+.w-key { display: flex; flex-wrap: nowrap; white-space: nowrap; gap: 10px; margin-top: 10px; font-size: 11px; letter-spacing: 1px; color: #9684b8; }
 .w-key i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
 .w-chart { touch-action: pan-y; }
 .w-chart .wl { font-size: 11.5px; font-family: 'DM Sans', sans-serif; font-weight: 700; paint-order: stroke; stroke: #1a0633; stroke-width: 3px; }
 .w-chart .wl.avg { fill: #e8f84a; } .w-chart .wl.ext { fill: #f0e6ff; }
 .w-readout { min-height: 18px; margin-top: 8px; font-size: 13px; color: #9684b8; text-align: center; letter-spacing: 0.5px; }
 .w-readout b { color: #fff; } .w-readout em { color: #e8f84a; font-style: normal; }
+input, textarea, select, [contenteditable], [contenteditable] * { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+img, svg { -webkit-user-drag: none; }
+.plan-add { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; border: 1.5px dashed #9684b8; background: transparent; color: #c8a8e8; font-size: 18px; line-height: 1; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.plan-rest-row { display: flex; align-items: center; gap: 10px; }
+.xp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.xp-btn { display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 12px; border: 1.5px dashed var(--c); background: transparent; color: var(--c); font-family: 'Bebas Neue', sans-serif; letter-spacing: 1.5px; font-size: 17px; text-align: left; }
+.xp-btn.on { border-style: solid; background: var(--c); color: #1a0633; }
+.xp-btn.fixed { opacity: 0.45; }
 .w-hero { display: flex; align-items: baseline; gap: 12px; margin-top: 14px; }
 .w-wk { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.5px; color: #fff; }
 .w-wk small { font-size: 13px; letter-spacing: 1.5px; color: #9684b8; }
@@ -2280,6 +2289,15 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
     <div class="workout-card-note" style="color:#d4baeb; margin-bottom:12px;">In-device snapshots, taken once a week automatically. These survive a Clear-All-Data, but not phone loss — use the BACK UP banner for that.</div>
     <div id="restoreContent"></div>
     <button class="menu-item" id="closeRestoreBtn" style="color:#666; justify-content:center; margin-top:8px;">Close</button>
+  </div>
+</div>
+<div class="workout-sheet" id="extraSheet">
+  <div class="workout-sheet-inner">
+    <div class="menu-handle"></div>
+    <div class="workout-title">Add to today</div>
+    <div class="workout-card-note" style="color:#d4baeb;margin-bottom:12px;">Today only. Your weekly plan stays the same. Tap again to remove.</div>
+    <div id="extraContent"></div>
+    <button class="menu-item" id="closeExtraBtn" style="color:#666; justify-content:center; margin-top:8px;">Done</button>
   </div>
 </div>
 <div class="workout-sheet" id="bwSheet">
@@ -2592,7 +2610,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "2.8";
+const APP_VERSION = "2.9";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -3599,7 +3617,7 @@ function renderWeightChart(days, compact) {
     wChartPts = pts.map(([k, w]) => ({ k, w, a: weightAvg(k).avg, x: X(k), y: Y(w) }));
     wChartW = W;
   }
-  const hiDot = compact ? "" : `<circle id="wHi" cx="-50" cy="-50" r="6" fill="none" stroke="#fff" stroke-width="2"/>`;
+  const hiDot = compact ? "" : `<circle id="wHi" cx="0" cy="0" r="6" fill="none" stroke="#fff" stroke-width="2" style="display:none"/>`;
   const svg = `<svg class="w-chart" ${compact ? "" : `id="wChart"`} viewBox="0 0 ${W} ${H}" role="img" aria-label="Weight chart">${g}${ref}${dots}${line}${trend}${xl}${lab}${hiDot}</svg>`;
   if (compact) return svg;
   let leg = `<span><i class="dot" style="background:${WCOL.dot}"></i>DAILY</span><span><i style="border-color:${WCOL.avg}"></i>7-DAY AVG</span>${tr ? `<span><i class="dash" style="border-color:${WCOL.trend}"></i>TREND</span>` : ""}`;
@@ -3611,15 +3629,27 @@ let wChartPts = [], wChartW = 440;
 function wReadoutHTML(p, latest) {
   return `${latest ? "LATEST · " : ""}<b>${fmtDay(p.k)} · ${fmtKg(p.w)} KG</b> · <em>AVG ${fmtKg(p.a)}</em>${latest ? " · TAP THE CHART" : ""}`;
 }
-function wChartPick(svg, clientX) {
+// Tap near a dot to show that day; tap empty chart to clear. Drag after a hit to scrub.
+let wDrag = false;
+function wChartPick(svg, clientX, clientY, scrub) {
   if (!wChartPts.length) return;
-  const r = svg.getBoundingClientRect();
-  const x = (clientX - r.left) / r.width * wChartW;
-  let best = wChartPts[0];
-  wChartPts.forEach(p => { if (Math.abs(p.x - x) < Math.abs(best.x - x)) best = p; });
-  const hi = svg.querySelector("#wHi");
-  if (hi) { hi.setAttribute("cx", best.x); hi.setAttribute("cy", best.y); }
-  const out = document.getElementById("wReadout");
+  const r = svg.getBoundingClientRect(), k = r.width / wChartW;   // viewBox units -> screen px
+  const x = (clientX - r.left) / k, y = (clientY - r.top) / k;
+  let best = null, bd = Infinity;
+  wChartPts.forEach(p => {
+    const d = scrub ? Math.abs(p.x - x) : Math.hypot(p.x - x, p.y - y);
+    if (d < bd) { bd = d; best = p; }
+  });
+  const hit = scrub || bd * k <= 24;
+  const hi = svg.querySelector("#wHi"), out = document.getElementById("wReadout");
+  if (!hit) {
+    wDrag = false;
+    if (hi) hi.style.display = "none";
+    if (out) out.innerHTML = "TAP FOR ANY DAY";
+    return;
+  }
+  wDrag = true;
+  if (hi) { hi.setAttribute("cx", best.x); hi.setAttribute("cy", best.y); hi.style.display = ""; }
   if (out) out.innerHTML = wReadoutHTML(best, false);
 }
 
@@ -3674,9 +3704,34 @@ function renderWeightRing(ws) {
 }
 function sessionMinutes(s) { const m = parseFloat(s.data && s.data.duration); return isFinite(m) && m > 0 ? m : 0; }
 function discColor(d) { return (DISCIPLINE_CONFIG[d] && DISCIPLINE_CONFIG[d].color) || "#8b5cf6"; }
+// One-off extra planned sessions, per date (doesn't touch the weekly plan).
+const EXTRA_KEY = "hq:plan-extra";
+function loadExtra() { const x = lsGet(EXTRA_KEY, {}); return x && typeof x === "object" ? x : {}; }
+function extraFor(iso) { return (loadExtra()[iso] || []).filter(d => DISCIPLINES.includes(d)); }
+function toggleExtra(iso, d) {
+  const x = loadExtra(), cur = new Set(x[iso] || []);
+  cur.has(d) ? cur.delete(d) : cur.add(d);
+  if (cur.size) x[iso] = [...cur]; else delete x[iso];
+  // keep it tidy: drop anything older than 60 days
+  const cut = addDaysISO(todayISO(), -60);
+  Object.keys(x).forEach(k => { if (k < cut) delete x[k]; });
+  lsSet(EXTRA_KEY, x);
+}
+function plannedFor(iso, plan) {
+  const base = (plan[parseLocalISO(iso).getDay()] || []).filter(d => DISCIPLINES.includes(d));
+  return base.concat(extraFor(iso).filter(d => !base.includes(d)));
+}
+function renderExtraPicker() {
+  const t = todayISO(), base = (loadPlan()[parseLocalISO(t).getDay()] || []), extra = extraFor(t);
+  return `<div class="xp-grid">${DISCIPLINES.map(d => {
+    const c = DISCIPLINE_CONFIG[d] || { icon: "•" }, fixed = base.includes(d), on = fixed || extra.includes(d);
+    return `<button class="xp-btn ${on ? "on" : ""} ${fixed ? "fixed" : ""}" style="--c:${discColor(d)}" ${fixed ? "disabled" : `data-xp="${d}"`}>
+      <span>${c.icon}</span><span>${d.toUpperCase()}</span></button>`;
+  }).join("")}</div>`;
+}
 function renderTodayTrainCard() {
   const t = todayISO(), plan = loadPlan();
-  const planned = (plan[parseLocalISO(t).getDay()] || []).filter(d => DISCIPLINES.includes(d));
+  const planned = plannedFor(t, plan);
   const todays = state.sessions.filter(s => s.date === t);
   const done = new Set(todays.map(s => s.discipline));
   const chip = (d, isDone, extra) => {
@@ -3698,7 +3753,7 @@ function renderTodayTrainCard() {
     ss.forEach(s => { by[s.discipline] = (by[s.discipline] || 0) + sessionMinutes(s); });
     const tot = Object.values(by).reduce((a, b) => a + b, 0);
     weekMin += tot; maxMin = Math.max(maxMin, tot);
-    week.push({ d, by, tot, plan: (plan[parseLocalISO(d).getDay()] || []).filter(x => DISCIPLINES.includes(x)) });
+    week.push({ d, by, tot, plan: plannedFor(d, plan) });
   }
   const letters = ["M", "T", "W", "T", "F", "S", "S"];
   const bars = week.map((w, i) => `<div class="tw-day ${w.d === t ? "today" : ""}">
@@ -3708,7 +3763,8 @@ function renderTodayTrainCard() {
   const hrs = (weekMin / 60).toFixed(1);
   return `<div class="dcard">
     <div class="dcard-h"><button class="dcard-link" data-view="log">🏋️ TRAIN TODAY<i>›</i></button><span class="r">${(st => st >= 2 ? `<span class="streak">🔥${st}</span>` : "")(trainStreak())}${hrs} H THIS WEEK</span></div>
-    ${chips ? `<div class="plan-today-row">${chips}</div>` : `<div class="plan-rest">REST DAY</div>`}
+    ${chips ? `<div class="plan-today-row">${chips}<button class="plan-add" id="planAddBtn" aria-label="Add planned session">+</button></div>`
+      : `<div class="plan-rest-row"><div class="plan-rest">REST DAY</div><button class="plan-add" id="planAddBtn" aria-label="Add planned session">+</button></div>`}
     <div class="tw-week">${bars}</div>
     <button class="save-btn log-cta" data-view="log">+ LOG SESSION</button>
   </div>`;
@@ -3885,7 +3941,7 @@ function renderWeightView() {
     const dot = `<i class="wd" ${pv ? `style="background:${DRINK_COLORS[pv]}"` : ""} title="Day before: ${pv ? DRINK_NAMES[pv] : "not logged"}"></i>`;
     return `<div class="w-li"><span data-w-edit="${k}">${fmtDay(k)}${dot}</span><span class="dlt ${cls}">${dl == null ? "" : fmtSigned(dl)}</span><span class="k" data-w-edit="${k}">${fmtKg(daily.weights[k])}</span><span class="wa">${a ? "avg " + fmtKg(a.avg) : ""}</span><button class="w-del" data-w-del="${k}" aria-label="Delete">×</button></div>`;
   }).join("");
-  const key = `<div class="w-key"><span>DOT = DRINKS THE DAY BEFORE</span>${["none", "light", "full"].map(x => `<span><i style="background:${DRINK_COLORS[x]}"></i>${DRINK_NAMES[x]}</span>`).join("")}</div>`;
+  const key = `<div class="w-key"><span>DRINKS DAY BEFORE:</span>${["none", "light", "full"].map(x => `<span><i style="background:${DRINK_COLORS[x]}"></i>${DRINK_NAMES[x]}</span>`).join("")}</div>`;
   const entryCard = `<div class="dcard">
     <div class="dcard-h"><span>LOG OR EDIT A DAY</span></div>
     <div class="w-entry">
@@ -4029,8 +4085,10 @@ function attachDailyHandlers() {
   });
   const wc = app.querySelector("#wChart");
   if (wc) {
-    wc.addEventListener("pointerdown", e => wChartPick(wc, e.clientX));
-    wc.addEventListener("pointermove", e => { if (e.buttons || e.pointerType === "mouse") wChartPick(wc, e.clientX); });
+    wDrag = false;
+    wc.addEventListener("pointerdown", e => wChartPick(wc, e.clientX, e.clientY, false));
+    wc.addEventListener("pointermove", e => { if (wDrag && e.buttons) wChartPick(wc, e.clientX, e.clientY, true); });
+    wc.addEventListener("pointerup", () => { wDrag = false; });
   }
   on("[data-drink-num]", "click", el => { setDrinkCount(el.dataset.date, Number(el.dataset.drinkNum)); render(); });
   on("[data-drink-clear]", "click", el => { delete daily.drink[el.dataset.drinkClear]; delete daily.counts[el.dataset.drinkClear]; saveDrink(); render(); showToast("Cleared"); });
@@ -6851,6 +6909,22 @@ function setupMenu() {
   attachSheetSwipe(document.getElementById("workoutSheet"), document.querySelector("#workoutSheet .workout-sheet-inner"));
   attachSheetSwipe(document.getElementById("discSheet"), document.querySelector("#discSheet .workout-sheet-inner"));
 
+  const xSheet = document.getElementById("extraSheet"), xBox = document.getElementById("extraContent");
+  document.getElementById("app").addEventListener("click", e => {
+    if (!e.target.closest("#planAddBtn")) return;
+    xBox.innerHTML = renderExtraPicker();
+    xSheet.classList.add("open");
+  });
+  xBox.addEventListener("click", e => {
+    const b = e.target.closest("[data-xp]"); if (!b) return;
+    toggleExtra(todayISO(), b.dataset.xp);
+    xBox.innerHTML = renderExtraPicker();
+    render();
+  });
+  const closeX = () => xSheet.classList.remove("open");
+  document.getElementById("closeExtraBtn").addEventListener("click", closeX);
+  xSheet.addEventListener("click", e => { if (e.target === xSheet) closeX(); });
+  attachSheetSwipe(xSheet, xSheet.querySelector(".workout-sheet-inner"));
   const bwSheet = document.getElementById("bwSheet"), bwBox = document.getElementById("bwContent");
   document.getElementById("settingsBtn").addEventListener("click", () => {
     sheet.classList.remove("open");
