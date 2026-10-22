@@ -2221,6 +2221,12 @@ img, svg { -webkit-user-drag: none; }
 .tw-day.today.glow .tw-bar { box-shadow: 0 0 0 1.5px #e8f84a, 0 0 16px 1px rgba(232,248,74,0.65); }
 .drink-btn.active.glow { box-shadow: 0 0 18px -2px var(--c), 0 0 0 1px var(--c); }
 .w-save.done[data-w-save-today] { box-shadow: 0 0 0 1px #a3e635 inset, 0 0 16px -2px #a3e635; }
+.period-label.is-today { border-color: #e8f84a; box-shadow: 0 0 0 1px rgba(232,248,74,0.3); color: #fff; }
+.w-date.is-today { border-color: #e8f84a; box-shadow: 0 0 0 1px rgba(232,248,74,0.3); }
+.mlbl.now { color: #e8f84a; }
+.period-label .date-day-badge { position: static; transform: none; display: inline-block; margin-right: 8px; vertical-align: 1px; }
+.w-li span.is-today { color: #e8f84a; }
+.header .tab.active { box-shadow: 0 0 18px 2px rgba(139,92,246,0.75), 0 4px 14px rgba(139,92,246,0.55), 0 0 0 1px rgba(255,255,255,0.18) inset; }
 .w-hero { display: flex; align-items: baseline; gap: 12px; margin-top: 14px; }
 .w-wk { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.5px; color: #fff; }
 .w-wk small { font-size: 13px; letter-spacing: 1.5px; color: #9684b8; }
@@ -2613,7 +2619,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "3.0";
+const APP_VERSION = "3.1";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -3808,7 +3814,7 @@ function renderDrinkView() {
     <div class="dcard-h"><span>LOG A DAY</span>${daily.drink[d] ? `<button class="link-btn" data-drink-clear="${d}">CLEAR</button>` : ""}</div>
     <div class="period-nav">
       <button class="period-step" data-drink-day="-1">‹</button>
-      <div class="period-label">${isToday ? "TODAY · " : ""}${fmtDay(d)}</div>
+      <div class="period-label ${isToday ? "is-today" : ""}">${isToday ? `<span class="date-day-badge is-today">TODAY</span>` : ""}${fmtDay(d)}</div>
       <button class="period-step" data-drink-day="1" ${isToday ? "disabled" : ""}>›</button>
     </div>
     ${renderDrinkButtons(d)}
@@ -3901,7 +3907,7 @@ function renderDrinkMonths() {
       const p = c[k] / tot * 100;
       return `<div class="mseg" style="height:${p}%;background:${DRINK_COLORS[k]}">${p >= 12 ? Math.round(p) : ""}</div>`;
     }).join("");
-    return `<button class="mcol" data-cal-jump="${mk}"><div class="mbar">${segs}</div><div class="mlbl">${new Date(yy, mm - 1, 1).toLocaleDateString("en-AU", { month: "short" }).toUpperCase()}</div></button>`;
+    return `<button class="mcol" data-cal-jump="${mk}"><div class="mbar">${segs}</div><div class="mlbl ${mk === todayISO().slice(0, 7) ? "now" : ""}">${new Date(yy, mm - 1, 1).toLocaleDateString("en-AU", { month: "short" }).toUpperCase()}</div></button>`;
   }).join("");
   return `<div class="dcard"><div class="dcard-h"><span>BY MONTH</span><span class="r">% OF DAYS LOGGED</span></div><div class="mchart" id="drinkMonths">${cols}</div></div>`;
 }
@@ -3939,13 +3945,13 @@ function renderWeightView() {
     const cls = dl == null ? "" : dl > 0.05 ? "up" : dl < -0.05 ? "down" : "";
     const a = weightAvg(k), pv = daily.drink[addDaysISO(k, -1)];
     const dot = `<i class="wd" ${pv ? `style="background:${DRINK_COLORS[pv]}"` : ""} title="Day before: ${pv ? DRINK_NAMES[pv] : "not logged"}"></i>`;
-    return `<div class="w-li"><span data-w-edit="${k}">${fmtDay(k)}${dot}</span><span class="dlt ${cls}">${dl == null ? "" : fmtSigned(dl)}</span><span class="k" data-w-edit="${k}">${fmtKg(daily.weights[k])}</span><span class="wa">${a ? "avg " + fmtKg(a.avg) : ""}</span><button class="w-del" data-w-del="${k}" aria-label="Delete">×</button></div>`;
+    return `<div class="w-li"><span data-w-edit="${k}" class="${k === todayISO() ? "is-today" : ""}">${fmtDay(k)}${dot}</span><span class="dlt ${cls}">${dl == null ? "" : fmtSigned(dl)}</span><span class="k" data-w-edit="${k}">${fmtKg(daily.weights[k])}</span><span class="wa">${a ? "avg " + fmtKg(a.avg) : ""}</span><button class="w-del" data-w-del="${k}" aria-label="Delete">×</button></div>`;
   }).join("");
   const key = `<div class="w-key"><span>DRINKS DAY BEFORE:</span>${["none", "light", "full"].map(x => `<span><i style="background:${DRINK_COLORS[x]}"></i>${DRINK_NAMES[x]}</span>`).join("")}</div>`;
   const entryCard = `<div class="dcard">
     <div class="dcard-h"><span>LOG OR EDIT A DAY</span></div>
     <div class="w-entry">
-      <input class="input w-date" type="date" id="wDateInput" value="${d}" max="${todayISO()}">
+      <input class="input w-date ${d === todayISO() ? "is-today" : ""}" type="date" id="wDateInput" value="${d}" max="${todayISO()}">
       <input class="input w-input" id="wDateKg" type="number" inputmode="decimal" step="0.01" placeholder="KG" value="${ex != null ? ex : ""}">
       <button class="w-save" data-w-save-date>SAVE</button>
     </div>
