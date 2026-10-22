@@ -1957,7 +1957,7 @@ details.dcard:not([open]) .dcard-h { margin-bottom: 0; }
 /* chart */
 .w-chart { display: block; width: 100%; height: auto; margin-top: 14px; overflow: visible; }
 .w-chart .wg { stroke: rgba(255,255,255,0.08); stroke-width: 1; }
-.w-chart .wt { fill: #9684b8; font-size: 10px; font-family: 'DM Sans', sans-serif; }
+.w-chart .wt { fill: #b9a6d6; font-size: 13px; font-family: 'DM Sans', sans-serif; }
 .w-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; font-family: 'Bebas Neue', sans-serif; letter-spacing: 1.2px; font-size: 12px; color: #c8a8e8; }
 .w-legend i { display: inline-block; width: 14px; height: 0; border-top: 2.5px solid; vertical-align: 3px; margin-right: 5px; }
 .w-legend i.dot { width: 7px; height: 7px; border: none; border-radius: 50%; vertical-align: 1px; }
@@ -2218,6 +2218,9 @@ img, svg { -webkit-user-drag: none; }
 .xp-btn { display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 12px; border: 1.5px dashed var(--c); background: transparent; color: var(--c); font-family: 'Bebas Neue', sans-serif; letter-spacing: 1.5px; font-size: 17px; text-align: left; }
 .xp-btn.on { border-style: solid; background: var(--c); color: #1a0633; }
 .xp-btn.fixed { opacity: 0.45; }
+.tw-day.today.glow .tw-bar { box-shadow: 0 0 0 1.5px #e8f84a, 0 0 16px 1px rgba(232,248,74,0.65); }
+.drink-btn.active.glow { box-shadow: 0 0 18px -2px var(--c), 0 0 0 1px var(--c); }
+.w-save.done[data-w-save-today] { box-shadow: 0 0 0 1px #a3e635 inset, 0 0 16px -2px #a3e635; }
 .w-hero { display: flex; align-items: baseline; gap: 12px; margin-top: 14px; }
 .w-wk { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.5px; color: #fff; }
 .w-wk small { font-size: 13px; letter-spacing: 1.5px; color: #9684b8; }
@@ -2610,7 +2613,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "2.9";
+const APP_VERSION = "3.0";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -3566,7 +3569,7 @@ function renderWeightChart(days, compact) {
   const tr = weightTrend(t);
   const ext = compact || !tr ? 0 : 14;                // project the trend 2 weeks ahead
   const end = addDaysISO(t, ext);
-  const W = 440, H = compact ? 130 : 230, pl = 32, pr = 8, pt = 8, pb = compact ? 6 : 20;
+  const W = 440, H = compact ? 130 : 230, pl = 38, pr = 8, pt = 8, pb = compact ? 6 : 24;
   const total = Math.max(1, daysBetweenISO(from, t) + ext);
   const X = d => pl + daysBetweenISO(from, d) / total * (W - pl - pr);
 
@@ -3589,7 +3592,7 @@ function renderWeightChart(days, compact) {
   const range = hi - lo, step = range > 8 ? 2 : range > 4 ? 1 : 0.5;
   for (let i = Math.ceil(lo / step); i * step <= hi; i++) {
     const v = i * step;
-    g += `<line class="wg" x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}"/><text class="wt" x="${pl - 5}" y="${Y(v) + 3.5}" text-anchor="end">${step < 1 ? v.toFixed(1) : v.toFixed(0)}</text>`;
+    g += `<line class="wg" x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}"/><text class="wt" x="${pl - 6}" y="${Y(v) + 4.5}" text-anchor="end">${step < 1 ? v.toFixed(1) : v.toFixed(0)}</text>`;
   }
   let ref = "";
   if (s.mode === "maintain" && typeof s.baseline === "number") {
@@ -3605,15 +3608,11 @@ function renderWeightChart(days, compact) {
   const trend = seg ? `<line x1="${X(seg[0])}" y1="${Y(seg[1])}" x2="${X(seg[2])}" y2="${Y(seg[3])}" stroke="${WCOL.trend}" stroke-width="2" stroke-dasharray="5 4" opacity="0.9"/>` : "";
   let xl = "";
   if (!compact) {
-    [from, t].forEach((d, i) => { xl += `<text class="wt" x="${X(d)}" y="${H - 5}" text-anchor="${i ? "middle" : "start"}">${shortDate(d)}</text>`; });
+    [from, t].forEach((d, i) => { xl += ` <text class="wt" x="${X(d)}" y="${H - 4}" text-anchor="${i ? "middle" : "start"}">${shortDate(d)}</text>`; });
   }
   let lab = "";
   if (!compact) {
     const anchor = k => X(k) < pl + 40 ? "start" : X(k) > W - pr - 40 ? "end" : "middle";
-    if (avg.length > 1) {
-      const a1 = avg[avg.length - 1];
-      lab += `<text class="wl avg" x="${X(a1[0])}" y="${Y(a1[1]) - 9}" text-anchor="${anchor(a1[0])}">${fmtKg(a1[1])}</text>`;
-    }
     wChartPts = pts.map(([k, w]) => ({ k, w, a: weightAvg(k).avg, x: X(k), y: Y(w) }));
     wChartW = W;
   }
@@ -3756,7 +3755,8 @@ function renderTodayTrainCard() {
     week.push({ d, by, tot, plan: plannedFor(d, plan) });
   }
   const letters = ["M", "T", "W", "T", "F", "S", "S"];
-  const bars = week.map((w, i) => `<div class="tw-day ${w.d === t ? "today" : ""}">
+  const dayDone = planned.length > 0 && planned.every(d => done.has(d));
+  const bars = week.map((w, i) => `<div class="tw-day ${w.d === t ? "today" + (dayDone ? " glow" : "") : ""}">
       <div class="tw-bar">${Object.keys(w.by).map(k => `<i style="height:${w.by[k] / maxMin * 100}%;background:${discColor(k)}"></i>`).join("")}</div>
       <div class="tw-plan">${w.plan.map(p => `<b style="background:${discColor(p)}"></b>`).join("")}</div>
       <div class="tw-lbl">${letters[i]}</div></div>`).join("");
@@ -3783,7 +3783,7 @@ function renderDrinkButtons(iso) {
   const cnt = (v === "light" || v === "full") ? daily.counts[iso] : null;
   const sub = { none: "0", light: "1–" + ds.lightMax, full: ds.fullMin + "+" };
   const btns = ["none", "light", "full"].map(k =>
-    `<button class="drink-btn ${v === k ? "active" : ""}" style="--c:${DRINK_COLORS[k]}" data-drink-set="${k}" data-date="${iso}">${DRINK_NAMES[k]}<small>${sub[k]}</small></button>`).join("");
+    `<button class="drink-btn ${v === k ? "active" : ""} ${v === k && k === "none" && iso === todayISO() ? "glow" : ""}" style="--c:${DRINK_COLORS[k]}" data-drink-set="${k}" data-date="${iso}">${DRINK_NAMES[k]}<small>${sub[k]}</small></button>`).join("");
   let nums = "";
   for (let n = 1; n <= 10; n++) {
     const col = n >= ds.fullMin ? DRINK_COLORS.full : DRINK_COLORS.light;
@@ -4599,8 +4599,7 @@ const CHEERS = [
   "You're basically an athlete now. Basically.",
   "Logged. Flexed. Unstoppable.",
   "Bloody oath, what a session.",
-  "Somewhere a PT just felt a disturbance.",
-  "Beast mode on. Snacks earned (within reason).",
+  "Beast mode on. Snacks earned.",
   "That's how it's bloody done.",
   "Main character energy.",
   "Another brick in the wall of gains.",
@@ -4609,16 +4608,16 @@ const CHEERS = [
   "Mate. MATE. Unreal.",
 ];
 const CHEER_EMOJI = ["🔥", "💪", "🏆", "🚀", "⚡", "👊", "🥇", "😤"];
-// One deck per training type; about 1 in 3 pop-ups still come from the generic deck.
+// One deck per training type; about 1 in 5 pop-ups still come from the generic deck.
 const CHEER_DECKS = {
   Swim: ["Open water? Bring it on.", "Fish are taking notes.", "Chlorine is the new cologne.", "Lap after lap. Absolute machine.",
-    "Michael Phelps just felt a chill.", "Gills: pending.", "Smashed it, and didn't drown. Winning.", "Stroke after stroke. Relentless.",
-    "Pool's still recovering from that.", "Wet hair, dry excuses."],
+    "Gills: pending.", "Smashed it, and didn't drown. Winning.", "Stroke after stroke. Relentless.",
+    "Pool's still recovering from that."],
   Run: ["Those legs are getting dangerous.", "Kilometres in the bank. Interest compounding.", "Mileage machine.", "Heart, lungs, legs: all upgraded.",
     "Outran your excuses again.", "Forrest who?", "The footpath called. It's scared of you.", "Pace? Spicy.",
     "Every km counts. You're counting a lot.", "Run done. Smugness: earned."],
   Strength: ["Gravity just lodged a complaint.", "Iron: lifted. Ego: also lifted.", "Muscles under construction.", "Heavy things moved. Respect.",
-    "Tomorrow's stairs will remember this.", "That's some quality grunt work.", "Sleeves are now optional.", "Strong like a Bunnings trolley.",
+    "That's some quality grunt work.", "Sleeves are now optional.", "Strong like a Bunnings trolley.",
     "Reps in, gains pending.", "You lift, therefore you are."],
   Active: ["That had some serious grunt.", "Absolutely cooked it.", "Sweat level: sauna.", "Engine room fully stoked.",
     "Heart rate said hello.", "Proper hard yakka, that.", "Absolutely full noise.", "Lungs: tested. Legend: confirmed.",
@@ -4655,7 +4654,7 @@ function drawFromDeck(name, lines) {
 function nextCheer(discipline) {
   const deckName = CHEER_DECK_FOR[discipline] || discipline;
   const deck = CHEER_DECKS[deckName];
-  if (deck && Math.random() >= 1 / 3) return drawFromDeck(deckName, deck);
+  if (deck && Math.random() >= 1 / 5) return drawFromDeck(deckName, deck);
   return drawFromDeck("generic", CHEERS);
 }
 let cheerTimer = null;
