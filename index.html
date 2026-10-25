@@ -2246,6 +2246,8 @@ img, svg { -webkit-user-drag: none; }
 .steps-cta { background: transparent; color: #2dd4bf; box-shadow: 0 0 0 2px #2dd4bf inset; }
 .steps-cta.on { background: #2dd4bf; color: #1a0633; box-shadow: 0 0 18px -3px #2dd4bf; }
 .sc-streak { font-size: 0.85em; }
+.w-scroll { max-height: calc(7 * var(--w-row, 39px)); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  -webkit-mask-image: linear-gradient(180deg, #000 88%, transparent); mask-image: linear-gradient(180deg, #000 88%, transparent); }
 .w-hero { display: flex; align-items: baseline; gap: 12px; margin-top: 14px; }
 .w-wk { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.5px; color: #fff; }
 .w-wk small { font-size: 13px; letter-spacing: 1.5px; color: #9684b8; }
@@ -2638,7 +2640,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "3.5";
+const APP_VERSION = "3.6";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -3959,9 +3961,9 @@ function renderWeightView() {
   </div>`;
 
   const d = daily.weightDate, ex = daily.weights[d];
-  const keys = Object.keys(daily.weights).sort().reverse().slice(0, 14);
+  const keys = Object.keys(daily.weights).sort().reverse();
   const list = keys.map((k, i) => {
-    const prevK = Object.keys(daily.weights).filter(x => x < k).sort().pop();
+    const prevK = keys[i + 1];
     const dl = prevK ? daily.weights[k] - daily.weights[prevK] : null;
     const cls = dl == null ? "" : dl > 0.05 ? "up" : dl < -0.05 ? "down" : "";
     const a = weightAvg(k), pv = daily.drink[addDaysISO(k, -1)];
@@ -3976,7 +3978,7 @@ function renderWeightView() {
       <input class="input w-input" id="wDateKg" type="number" inputmode="decimal" step="0.01" placeholder="KG" value="${ex != null ? ex : ""}">
       <button class="w-save" data-w-save-date>SAVE</button>
     </div>
-    ${list ? `<div class="w-list">${list}</div>${key}` : ""}
+    ${list ? `<div class="w-list ${keys.length > 7 ? "w-scroll" : ""}">${list}</div>${key}` : ""}
   </div>`;
 
   const modes = [["off", "OFF"], ["goal", "GOAL"], ["maintain", "MAINTAIN"]].map(([m, l]) => `<button class="range-btn ${s.mode === m ? "active" : ""}" data-w-mode="${m}">${l}</button>`).join("");
