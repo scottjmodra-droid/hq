@@ -2632,7 +2632,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "3.3";
+const APP_VERSION = "3.4";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -5053,6 +5053,7 @@ function renderLog() {
           if (s.data.distance) bits.push(`${s.data.distance}km`);
           if (s.data.duration) bits.push(fmtDuration(s.data.duration));
           if (s.data.calories) bits.push(`${s.data.calories} kcal`);
+          if (/^Estimated from Apple/.test(s.data.details || "")) bits.push("📱 est. from Apple");
           const nameLabel = s.subType
             ? `${s.discipline} · ${s.subType === "Other" && s.data.type ? s.data.type : s.subType}`
             : s.discipline;
