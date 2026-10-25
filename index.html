@@ -2227,6 +2227,14 @@ img, svg { -webkit-user-drag: none; }
 .period-label .date-day-badge { position: static; transform: none; display: inline-block; margin-right: 8px; vertical-align: 1px; }
 .w-li span.is-today { color: #e8f84a; }
 .header .tab.active { box-shadow: 0 0 18px 2px rgba(139,92,246,0.75), 0 4px 14px rgba(139,92,246,0.55), 0 0 0 1px rgba(255,255,255,0.18) inset; }
+.plan-today.steps .pt-streak { font-size: 13px; margin-left: 2px; }
+.tw-steps { font-family: 'Bebas Neue', sans-serif; font-size: 13px; line-height: 1; height: 13px; color: #2dd4bf; text-align: center; }
+.steps-row { display: flex; align-items: center; justify-content: space-between; width: 100%; margin: 4px 0 16px; padding: 12px 14px; border-radius: 12px;
+  border: 1.5px dashed #2dd4bf; background: transparent; color: #2dd4bf; font-family: 'Bebas Neue', sans-serif; letter-spacing: 1.5px; font-size: 17px; text-align: left; }
+.steps-row small { font-size: 12px; color: #9684b8; margin-left: 6px; letter-spacing: 1px; }
+.steps-row.on { border-style: solid; background: rgba(45,212,191,0.12); box-shadow: 0 0 16px -4px #2dd4bf; }
+.steps-box { width: 24px; height: 24px; border-radius: 6px; border: 2px solid #2dd4bf; display: inline-flex; align-items: center; justify-content: center; font-size: 17px; }
+.steps-row.on .steps-box { background: #2dd4bf; color: #1a0633; }
 .w-hero { display: flex; align-items: baseline; gap: 12px; margin-top: 14px; }
 .w-wk { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.5px; color: #fff; }
 .w-wk small { font-size: 13px; letter-spacing: 1.5px; color: #9684b8; }
@@ -2619,7 +2627,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "3.1";
+const APP_VERSION = "3.2";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -3746,6 +3754,7 @@ function renderTodayTrainCard() {
   };
   const chips = planned.map(d => chip(d, done.has(d), false)).join("")
     + [...done].filter(d => !planned.includes(d)).map(d => chip(d, true, true)).join("");
+  const stepsChip = renderStepsChip(t);
 
   // Mon–Sun minutes, stacked by discipline, with planned dots underneath
   const mon = localISO(mondayOf(parseLocalISO(t)));
@@ -3765,12 +3774,12 @@ function renderTodayTrainCard() {
   const bars = week.map((w, i) => `<div class="tw-day ${w.d === t ? "today" + (dayDone ? " glow" : "") : ""}">
       <div class="tw-bar">${Object.keys(w.by).map(k => `<i style="height:${w.by[k] / maxMin * 100}%;background:${discColor(k)}"></i>`).join("")}</div>
       <div class="tw-plan">${w.plan.map(p => `<b style="background:${discColor(p)}"></b>`).join("")}</div>
-      <div class="tw-lbl">${letters[i]}</div></div>`).join("");
+      <div class="tw-lbl">${letters[i]}</div>${stepsSet.on ? `<div class="tw-steps">${w.d <= t && stepsHit(w.d) ? "✓" : w.d < t ? "·" : ""}</div>` : ""}</div>`).join("");
   const hrs = (weekMin / 60).toFixed(1);
   return `<div class="dcard">
     <div class="dcard-h"><button class="dcard-link" data-view="log">🏋️ TRAIN TODAY<i>›</i></button><span class="r">${(st => st >= 2 ? `<span class="streak">🔥${st}</span>` : "")(trainStreak())}${hrs} H THIS WEEK</span></div>
-    ${chips ? `<div class="plan-today-row">${chips}<button class="plan-add" id="planAddBtn" aria-label="Add planned session">+</button></div>`
-      : `<div class="plan-rest-row"><div class="plan-rest">REST DAY</div><button class="plan-add" id="planAddBtn" aria-label="Add planned session">+</button></div>`}
+    ${chips ? `<div class="plan-today-row">${chips}${stepsChip}<button class="plan-add" id="planAddBtn" aria-label="Add planned session">+</button></div>`
+      : `<div class="plan-rest-row"><div class="plan-rest">REST DAY</div>${stepsChip}<button class="plan-add" id="planAddBtn" aria-label="Add planned session">+</button></div>`}
     <div class="tw-week">${bars}</div>
     <button class="save-btn log-cta" data-view="log">+ LOG SESSION</button>
   </div>`;
@@ -4140,6 +4149,7 @@ function buildFullBackup() {
     todo: { week: todo.week, all: todo.all, notes: todo.notes },
     plan: loadPlan(),
     disciplines: { enabled: discSet.enabled, custom: discSet.custom },
+    steps: stepsLog, stepsSettings: { on: !!stepsSet.on, target: stepsSet.target },
   };
 }
 function importAnyBackup(data) {
@@ -4170,6 +4180,17 @@ function importAnyBackup(data) {
     }
     return;
   }
+  if (data && typeof data === "object" && data.app === "hq-steps" && data.steps && typeof data.steps === "object") {   // step history file
+    const ks = Object.keys(data.steps).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
+    const tgt = Number(data.target) || stepsSet.target;
+    const hits = ks.filter(k => Number(data.steps[k]) >= tgt).length;
+    if (!confirm(`Import step history for ${ks.length} days (${hits} at ${tgt.toLocaleString("en-AU")}+)? Days you've ticked yourself stay ticked.`)) return;
+    ks.forEach(k => { if (stepsLog[k] !== true) { const v = Math.round(Number(data.steps[k])); if (v > 0) stepsLog[k] = v; } });
+    saveSteps();
+    if (!stepsSet.on) { stepsSet.on = true; saveStepsSettings(); }
+    render(); showToast(`Imported ${ks.length} days of steps`);
+    return;
+  }
   if (data && typeof data === "object" && (data.sessions || data.drink || data.weights)) {
     const parts = [];
     if (Array.isArray(data.sessions)) parts.push(`${data.sessions.length} sessions (replaces your ${state.sessions.length})`);
@@ -4196,6 +4217,11 @@ function importAnyBackup(data) {
       saveDisciplines(); applyDisciplines();
     }
     if (data.todo && Array.isArray(data.todo.all)) { todo.week = data.todo.week || []; todo.all = data.todo.all; todo.notes = data.todo.notes || []; saveTodo(); }
+    if (data.steps && typeof data.steps === "object") {
+      Object.keys(data.steps).forEach(k => { const v = data.steps[k]; if (/^\d{4}-\d{2}-\d{2}$/.test(k) && (v === true || Number(v) > 0)) stepsLog[k] = v === true ? true : Number(v); });
+      saveSteps();
+    }
+    if (data.stepsSettings) { Object.assign(stepsSet, data.stepsSettings); saveStepsSettings(); }
     syncBodyweight();
     updateWeightBadge(); render(); showToast("Import complete");
     return;
@@ -4505,6 +4531,57 @@ function histDisciplines() {
 }
 applyDisciplines();
 
+// ---- Daily steps goal (a habit, not a training session) ----
+// hq:steps = { "YYYY-MM-DD": true | <step count from Apple Health> }
+const STEPS_KEY = "hq:steps", STEPS_SET_KEY = "hq:steps-settings", STEPS_COL = "#2dd4bf";
+const stepsSet = Object.assign({ on: false, target: 10000 }, lsGet(STEPS_SET_KEY, {}) || {});
+let stepsLog = lsGet(STEPS_KEY, {}) || {};
+function saveSteps() { lsSet(STEPS_KEY, stepsLog); }
+function saveStepsSettings() { lsSet(STEPS_SET_KEY, { on: !!stepsSet.on, target: stepsSet.target }); }
+function stepsHit(iso) { const v = stepsLog[iso]; return v === true || (typeof v === "number" && v >= stepsSet.target); }
+function stepsLabel() { const k = stepsSet.target / 1000; return (Number.isInteger(k) ? k : k.toFixed(1)) + "K"; }
+function stepsStreak() {
+  let d = todayISO(); if (!stepsHit(d)) d = addDaysISO(d, -1);
+  let n = 0; while (stepsHit(d)) { n++; d = addDaysISO(d, -1); }
+  return n;
+}
+const STEP_CHEERS = ["Steps banked. Legs of steel.", "Step goal: smashed.", "Thousands of reasons to be smug.", "Pavement pounded. Goal ticked.",
+  "Every step counted. All of them.", "Feet: tired. Streak: alive.", "That's a lot of footpath.", "Steps on steps on steps.",
+  "Goal hit. Shoes deserve a raise.", "Walked it, earned it."];
+const STEP_STREAK_BIG = { 7: "A full week of steps. Unstoppable.", 30: "30 days straight. Absolute machine.", 100: "100-day streak. Walking legend." };
+function toggleSteps(iso) {
+  const was = stepsHit(iso);
+  if (was) { delete stepsLog[iso]; saveSteps(); render(); showToast("Steps goal unticked"); return; }
+  stepsLog[iso] = true; saveSteps(); render();
+  const st = stepsStreak(), counts = iso === todayISO() || iso === addDaysISO(todayISO(), -1);
+  if (counts && STEP_STREAK_BIG[st]) {
+    showPop({ emoji: "👟", line: STEP_STREAK_BIG[st], color: STEPS_COL, big: true, sub: `🔥 ${st}-DAY STEPS STREAK` });
+  } else {
+    showPop({ emoji: ["👟", "🚶‍♀️", "⚡", "🔥", "🏅"][Math.floor(Math.random() * 5)], line: drawFromDeck("steps", STEP_CHEERS), color: STEPS_COL,
+      sub: `👟 ${stepsLabel()} STEPS${counts && st >= 2 ? " · 🔥 " + st + " IN A ROW" : ""}` });
+  }
+}
+function renderStepsChip(iso) {
+  if (!stepsSet.on) return "";
+  const hit = stepsHit(iso), st = stepsStreak();
+  return `<button class="plan-today steps ${hit ? "done" : ""}" style="--c:${STEPS_COL}" data-steps-toggle="${iso}">
+    <span class="pt-icon">👟</span><span class="pt-name">${stepsLabel()}</span><span class="pt-tick">${hit ? "✓" : "☐"}</span>${st >= 2 ? `<span class="pt-streak">🔥${st}</span>` : ""}</button>`;
+}
+function renderStepsRow(iso) {
+  if (!stepsSet.on) return "";
+  const hit = stepsHit(iso), v = stepsLog[iso];
+  return `<button class="steps-row ${hit ? "on" : ""}" data-steps-toggle="${iso}">
+    <span>👟 HIT ${stepsLabel()} STEPS${typeof v === "number" ? ` <small>${v.toLocaleString("en-AU")}</small>` : ""}</span><span class="steps-box">${hit ? "✓" : ""}</span></button>`;
+}
+function renderStepsEditor() {
+  return `<div class="disc-h">DAILY STEPS GOAL</div>
+    <div class="disc-row">
+      <span class="disc-ic" style="--c:${STEPS_COL}">👟</span>
+      <span class="disc-nm">Steps goal<small>Tick on Today. Not counted as training.</small></span>
+      <button class="disc-tog ${stepsSet.on ? "on" : ""}" data-steps-on aria-label="Steps goal on or off"><i></i></button>
+    </div>
+    ${stepsSet.on ? `<div class="ds-row"><span>Target steps</span><div class="ds-in"><input class="input ds-num w" id="stepsTarget" type="number" inputmode="numeric" step="500" min="1000" max="50000" value="${stepsSet.target}"></div></div>` : ""}`;
+}
 function renderDiscEditor() {
   const on = DISCIPLINES.slice();
   const off = allDisciplineNames().filter(n => !on.includes(n));
@@ -4535,7 +4612,7 @@ function renderDiscEditor() {
         <select class="input disc-int" id="discInt"><option value="easy">Easy</option><option value="moderate" selected>Moderate</option><option value="hard">Hard</option></select>
       </div>
       <button class="w-save disc-addbtn" data-disc-add>ADD</button>
-    </div>`;
+    </div>${renderStepsEditor()}`;
 }
 function commitDisciplines() {
   saveDisciplines(); applyDisciplines();
@@ -4548,6 +4625,11 @@ function commitDisciplines() {
 function onDiscEditorClick(e) {
   const t = e.target.closest("button"); if (!t) return;
   const d = t.dataset;
+  if (d.stepsOn != null) {
+    stepsSet.on = !stepsSet.on; saveStepsSettings();
+    document.getElementById("discEditorContent").innerHTML = renderDiscEditor();
+    render(); return;
+  }
   if (d.discCol != null) {
     discUI.col = Number(d.discCol);
     document.querySelectorAll("#discEditorContent .disc-col").forEach(b => b.classList.toggle("on", b === t));
@@ -4919,6 +5001,7 @@ function renderLog() {
     </div>
 
     ${renderTodaysPlan(state.date)}
+    ${renderStepsRow(state.date)}
 
     ${activeFields.map(f => {
       const isNumber = f.type === "number";
@@ -6916,6 +6999,8 @@ function setupMenu() {
 
   const xSheet = document.getElementById("extraSheet"), xBox = document.getElementById("extraContent");
   document.getElementById("app").addEventListener("click", e => {
+    const stb = e.target.closest("[data-steps-toggle]");
+    if (stb) { e.preventDefault(); toggleSteps(stb.dataset.stepsToggle); return; }
     if (!e.target.closest("#planAddBtn")) return;
     xBox.innerHTML = renderExtraPicker();
     xSheet.classList.add("open");
@@ -7178,6 +7263,13 @@ document.getElementById("discBtn").addEventListener("click", () => {
   document.getElementById("discSheet").classList.add("open");
 });
 document.getElementById("discEditorContent").addEventListener("click", onDiscEditorClick);
+document.getElementById("discEditorContent").addEventListener("change", e => {
+  if (e.target.id !== "stepsTarget") return;
+  const v = Math.round(Number(e.target.value) / 100) * 100;
+  if (!(v >= 1000 && v <= 50000)) { showToast("Pick a target between 1,000 and 50,000"); e.target.value = stepsSet.target; return; }
+  stepsSet.target = v; saveStepsSettings(); e.target.value = v; render();
+  showToast(`Steps goal: ${v.toLocaleString("en-AU")}`);
+});
 document.getElementById("closeDiscBtn").addEventListener("click", () => document.getElementById("discSheet").classList.remove("open"));
 document.getElementById("discSheet").addEventListener("click", e => { if (e.target.id === "discSheet") e.target.classList.remove("open"); });
 document.getElementById("backupToggle").addEventListener("click", () => setBackupGroup(document.getElementById("backupGroup").hidden));
