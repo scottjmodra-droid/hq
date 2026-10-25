@@ -2235,6 +2235,11 @@ img, svg { -webkit-user-drag: none; }
 .steps-row.on { border-style: solid; background: rgba(45,212,191,0.12); box-shadow: 0 0 16px -4px #2dd4bf; }
 .steps-box { width: 24px; height: 24px; border-radius: 6px; border: 2px solid #2dd4bf; display: inline-flex; align-items: center; justify-content: center; font-size: 17px; }
 .steps-row.on .steps-box { background: #2dd4bf; color: #1a0633; }
+.cta-row { display: flex; gap: 8px; margin-top: 16px; }
+.cta-row .save-btn { flex: 1 1 0; min-width: 0; margin-top: 0; padding-left: 4px; padding-right: 4px; white-space: nowrap; font-size: 17px; letter-spacing: 1.5px; overflow: hidden; text-overflow: ellipsis; }
+.steps-cta { background: transparent; color: #2dd4bf; box-shadow: 0 0 0 2px #2dd4bf inset; }
+.steps-cta.on { background: #2dd4bf; color: #1a0633; box-shadow: 0 0 18px -3px #2dd4bf; }
+.sc-streak { font-size: 0.85em; }
 .w-hero { display: flex; align-items: baseline; gap: 12px; margin-top: 14px; }
 .w-wk { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.5px; color: #fff; }
 .w-wk small { font-size: 13px; letter-spacing: 1.5px; color: #9684b8; }
@@ -2627,7 +2632,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "3.2";
+const APP_VERSION = "3.3";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -3754,7 +3759,7 @@ function renderTodayTrainCard() {
   };
   const chips = planned.map(d => chip(d, done.has(d), false)).join("")
     + [...done].filter(d => !planned.includes(d)).map(d => chip(d, true, true)).join("");
-  const stepsChip = renderStepsChip(t);
+  const stepsChip = "";
 
   // Mon–Sun minutes, stacked by discipline, with planned dots underneath
   const mon = localISO(mondayOf(parseLocalISO(t)));
@@ -3781,7 +3786,8 @@ function renderTodayTrainCard() {
     ${chips ? `<div class="plan-today-row">${chips}${stepsChip}<button class="plan-add" id="planAddBtn" aria-label="Add planned session">+</button></div>`
       : `<div class="plan-rest-row"><div class="plan-rest">REST DAY</div>${stepsChip}<button class="plan-add" id="planAddBtn" aria-label="Add planned session">+</button></div>`}
     <div class="tw-week">${bars}</div>
-    <button class="save-btn log-cta" data-view="log">+ LOG SESSION</button>
+    ${stepsSet.on ? `<div class="cta-row"><button class="save-btn log-cta" data-view="log">+ LOG SESSION</button>${renderStepsBtn(t)}</div>`
+      : `<button class="save-btn log-cta" data-view="log">+ LOG SESSION</button>`}
   </div>`;
 }
 function renderTodayDrinkCard() {
@@ -4566,6 +4572,12 @@ function renderStepsChip(iso) {
   const hit = stepsHit(iso), st = stepsStreak();
   return `<button class="plan-today steps ${hit ? "done" : ""}" style="--c:${STEPS_COL}" data-steps-toggle="${iso}">
     <span class="pt-icon">👟</span><span class="pt-name">${stepsLabel()}</span><span class="pt-tick">${hit ? "✓" : "☐"}</span>${st >= 2 ? `<span class="pt-streak">🔥${st}</span>` : ""}</button>`;
+}
+function renderStepsBtn(iso) {
+  const hit = stepsHit(iso), st = stepsStreak();
+  return `<button class="save-btn steps-cta ${hit ? "on" : ""}" data-steps-toggle="${iso}">${hit
+    ? `✓ ${stepsLabel()} STEPS${st >= 2 ? ` <span class="sc-streak">🔥${st}</span>` : ""}`
+    : `👟 ${stepsLabel()} STEPS`}</button>`;
 }
 function renderStepsRow(iso) {
   if (!stepsSet.on) return "";
