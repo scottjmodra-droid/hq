@@ -402,6 +402,12 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
 .daily-bar-label.today .dom { color: #e8f84a; }
 .daily-chart.dense .daily-bar-label .dow { font-size: 9px; }
 .daily-chart.dense .daily-bar-label .dom { font-size: 9px; }
+.daily-bar-steps { font-family: 'Bebas Neue', sans-serif; font-size: 13px; line-height: 1; height: 13px; margin-top: 3px; color: #2dd4bf; }
+.daily-chart.has-steps { padding-bottom: 64px; }
+.daily-chart.has-steps .daily-bar-label { bottom: -60px; }
+.daily-chart.r-annual { padding-bottom: 30px; }
+.daily-chart.r-annual .daily-bar-label { bottom: -22px; }
+.daily-chart.r-annual .daily-bar-label .dom { display: none; }
 .daily-bar-plan { display:flex; gap:2px; justify-content:center; margin-top:3px; flex-wrap:wrap; }
 .daily-bar-plan-dot { width:5px; height:5px; border-radius:1px; flex-shrink:0; }
 .daily-bar-plan-dot.planned { background:transparent !important; border-width:1.5px; border-style:solid; opacity:0.7; }
@@ -2632,7 +2638,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "3.4";
+const APP_VERSION = "3.5";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -5368,7 +5374,7 @@ function renderDailyVolume(period) {
       const first = new Date(year, m, 1);
       buckets.push({
         key: monthKey(first), date: first,
-        label: { top: first.toLocaleDateString("en-AU", { month: "short" }).toUpperCase(), bot: "" },
+        label: { top: first.toLocaleDateString("en-AU", { month: "short" }).toUpperCase().slice(0, 3), bot: "" },
         isToday: monthKey(first) === monthKey(today),
         isWeekend: false,
       });
@@ -5463,7 +5469,7 @@ function renderDailyVolume(period) {
           </div>
         </div>
       </div>
-      <div class="daily-chart ${dense ? "dense" : ""}">
+      <div class="daily-chart ${dense ? "dense" : ""} r-${range}${range === 'week' && stepsSet.on ? " has-steps" : ""}">
         <div class="daily-y-axis">${yAxisHTML}</div>
         <div class="daily-grid">${gridHTML}${avgLineHTML}</div>
         <div class="daily-bars">
@@ -5494,12 +5500,15 @@ function renderDailyVolume(period) {
                   }).join('')}</div>`;
                 }
               }
+              const bISO = range === 'week' && b.date ? localISO(b.date) : '';
+              const stepsTickHTML = (range === 'week' && !dense && stepsSet.on)
+                ? `<div class="daily-bar-steps">${bISO <= todayISO() && stepsHit(bISO) ? "✓" : bISO < todayISO() ? "·" : ""}</div>` : "";
               return `
                 <div class="daily-bar-col" title="${fmtVal(b.total)}${unitLabel}">
                   ${colTotal}
                   <div class="daily-bar-stack" style="height:${stackHeight}px;">${segments}</div>
                   <div class="daily-bar-label ${cls}">
-                    ${b.hideLabel ? "" : `<span class="dow">${b.label.top}</span><span class="dom">${b.label.bot}</span>${planDotsHTML}`}
+                    ${b.hideLabel ? "" : `<span class="dow">${b.label.top}</span><span class="dom">${b.label.bot}</span>${planDotsHTML}${stepsTickHTML}`}
                   </div>
                 </div>
               `;
