@@ -2248,6 +2248,8 @@ img, svg { -webkit-user-drag: none; }
 .sc-streak { font-size: 0.85em; }
 .w-scroll { max-height: calc(7 * var(--w-row, 39px)); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
   -webkit-mask-image: linear-gradient(180deg, #000 88%, transparent); mask-image: linear-gradient(180deg, #000 88%, transparent); }
+.title-hi { color: #e8f84a; }
+.title-date { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .w-hero { display: flex; align-items: baseline; gap: 12px; margin-top: 14px; }
 .w-wk { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.5px; color: #fff; }
 .w-wk small { font-size: 13px; letter-spacing: 1.5px; color: #9684b8; }
@@ -2299,6 +2301,7 @@ img, svg { -webkit-user-drag: none; }
     <button class="menu-item" id="settingsBtn"><span class="menu-icon">⚙</span>Bodyweight <span id="weightDisplay" style="color:#666; margin-left:auto;"></span></button>
     <button class="menu-item" id="planBtn"><span class="menu-icon">📅</span>Training Plan</button>
     <button class="menu-item" id="discBtn"><span class="menu-icon">🏷</span>Disciplines</button>
+    <button class="menu-item" id="nickBtn"><span class="menu-icon">👋</span>Nickname <span id="nickDisplay" style="color:#666; margin-left:auto;"></span></button>
     <button class="menu-item" id="backupToggle" aria-expanded="false"><span class="menu-icon">💾</span>Backup &amp; data <span class="menu-chev" id="backupChev">▸</span></button>
     <div class="menu-group" id="backupGroup" hidden>
       <button class="menu-item" id="exportBtn"><span class="menu-icon">⬇</span>Export backup (JSON)</button>
@@ -2640,7 +2643,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "3.6";
+const APP_VERSION = "3.7";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -4108,7 +4111,7 @@ function attachDailyHandlers() {
     setDrinkCategory(k, cat); render();
     if (cat === "none" && was !== "none") {
       const st = k === todayISO() ? dryStreak() : 0;
-      showPop({ emoji: ZERO_EMOJI[Math.floor(Math.random() * ZERO_EMOJI.length)], line: drawFromDeck("zero", ZERO_CHEERS), color: DRINK_COLORS.none,
+      showPop({ emoji: ZERO_EMOJI[Math.floor(Math.random() * ZERO_EMOJI.length)], line: nickRoll() ? nickLine("zero") : drawFromDeck("zero", ZERO_CHEERS), color: DRINK_COLORS.none,
         sub: "ZERO DAY" + (st >= 2 ? " · 🔥 " + st + " IN A ROW" : "") });
     } else showToast("Saved: " + DRINK_NAMES[cat].toLowerCase());
   });
@@ -4164,6 +4167,7 @@ function buildFullBackup() {
     plan: loadPlan(),
     disciplines: { enabled: discSet.enabled, custom: discSet.custom },
     steps: stepsLog, stepsSettings: { on: !!stepsSet.on, target: stepsSet.target },
+    profile: { nick: nick() },
   };
 }
 function importAnyBackup(data) {
@@ -4236,6 +4240,7 @@ function importAnyBackup(data) {
       saveSteps();
     }
     if (data.stepsSettings) { Object.assign(stepsSet, data.stepsSettings); saveStepsSettings(); }
+    if (data.profile && typeof data.profile.nick === "string") { profile.nick = data.profile.nick.slice(0, 16); saveProfile(); }
     syncBodyweight();
     updateWeightBadge(); render(); showToast("Import complete");
     return;
@@ -4562,6 +4567,7 @@ function stepsStreak() {
 const STEP_CHEERS = ["Steps banked. Legs of steel.", "Step goal: smashed.", "Thousands of reasons to be smug.", "Pavement pounded. Goal ticked.",
   "Every step counted. All of them.", "Feet: tired. Streak: alive.", "That's a lot of footpath.", "Steps on steps on steps.",
   "Goal hit. Shoes deserve a raise.", "Walked it, earned it."];
+const STEP_STREAK_NICK = { 7: "A full week, {nick}. Unstoppable.", 30: "30 days straight, {nick}. Absolute machine.", 100: "100 days, {nick}. Walking legend." };
 const STEP_STREAK_BIG = { 7: "A full week of steps. Unstoppable.", 30: "30 days straight. Absolute machine.", 100: "100-day streak. Walking legend." };
 function toggleSteps(iso) {
   const was = stepsHit(iso);
@@ -4569,9 +4575,9 @@ function toggleSteps(iso) {
   stepsLog[iso] = true; saveSteps(); render();
   const st = stepsStreak(), counts = iso === todayISO() || iso === addDaysISO(todayISO(), -1);
   if (counts && STEP_STREAK_BIG[st]) {
-    showPop({ emoji: "👟", line: STEP_STREAK_BIG[st], color: STEPS_COL, big: true, sub: `🔥 ${st}-DAY STEPS STREAK` });
+    showPop({ emoji: "👟", line: nick() ? withNick(STEP_STREAK_NICK[st]) : STEP_STREAK_BIG[st], color: STEPS_COL, big: true, sub: `🔥 ${st}-DAY STEPS STREAK` });
   } else {
-    showPop({ emoji: ["👟", "🚶‍♀️", "⚡", "🔥", "🏅"][Math.floor(Math.random() * 5)], line: drawFromDeck("steps", STEP_CHEERS), color: STEPS_COL,
+    showPop({ emoji: ["👟", "🚶‍♀️", "⚡", "🔥", "🏅"][Math.floor(Math.random() * 5)], line: nickRoll() ? nickLine("steps") : drawFromDeck("steps", STEP_CHEERS), color: STEPS_COL,
       sub: `👟 ${stepsLabel()} STEPS${counts && st >= 2 ? " · 🔥 " + st + " IN A ROW" : ""}` });
   }
 }
@@ -4759,9 +4765,42 @@ function drawFromDeck(name, lines) {
   const i = bag.shift(); lsSet(bagKey, bag); lsSet(lastKey, i);
   return lines[i];
 }
+// ---- Nickname: used in about 1 in 3 pop-ups, and always at the big moments ----
+const PROFILE_KEY = "hq:profile";
+const profile = Object.assign({ nick: "" }, lsGet(PROFILE_KEY, {}) || {});
+function saveProfile() { lsSet(PROFILE_KEY, { nick: profile.nick || "" }); }
+function nick() { return String(profile.nick || "").trim(); }
+function withNick(line) { const n = nick(); return line.replace(/\{nick\}/g, n).replace(/\{NICK\}/g, n.toUpperCase()); }
+function nickRoll() { return !!nick() && Math.random() < 1 / 3; }
+const NICK_DECKS = {
+  generic: ["Absolute weapon, {nick}.", "{nick}, that's how it's bloody done.", "Couch: 0. {nick}: 1.", "Legend status renewed, {nick}.",
+    "Get around it, {nick}.", "{nick}. {NICK}. Unreal.", "Look at you go, {nick}.", "Main character energy, {nick}."],
+  Swim: ["Lap after lap. Machine, {nick}.", "Fish are taking notes, {nick}.", "{nick} 1, pool 0."],
+  Run: ["Those legs are getting dangerous, {nick}.", "Outran your excuses again, {nick}.", "Pace? Spicy, {nick}."],
+  Strength: ["Gravity just lodged a complaint about you, {nick}.", "Heavy things moved. Respect, {nick}.", "Strong like a Bunnings trolley, {nick}."],
+  Active: ["Absolutely cooked it, {nick}.", "Proper hard yakka, {nick}."],
+  Chilled: ["Steps banked, head cleared. Nice one, {nick}.", "Gentle legend behaviour, {nick}."],
+  Walk: ["Pounded that pavement, {nick}.", "Out there doing the work, {nick}.", "Strong legs, big lungs, {nick}."],
+  Stretch: ["Bendy legend, {nick}.", "Hamstrings send their thanks, {nick}."],
+  Mind: ["Core of steel, {nick}.", "Zen and strong. Unfair combo, {nick}."],
+  Cycle: ["Tour de {nick}.", "Hills feared you today, {nick}."],
+  zero: ["Dry day! {nick}'s liver is throwing a party.", "Clear head tomorrow, {nick}. Smug already.", "Dry and thriving, {nick}."],
+  steps: ["Steps banked, {nick}. Legs of steel.", "Goal hit. Shoes deserve a raise, {nick}.", "Walked it, earned it, {nick}."],
+};
+function nickLine(deckName) {
+  const d = NICK_DECKS[deckName] ? deckName : "generic";
+  return withNick(drawFromDeck("nick-" + d, NICK_DECKS[d]));
+}
+function greeting() {
+  const n = nick(); if (!n) return "";
+  const h = new Date().getHours();
+  const g = h >= 5 && h < 12 ? "MORNING" : h >= 12 && h < 17 ? "ARVO" : h >= 17 && h < 21 ? "EVENING" : "LATE ONE";
+  return g + ", " + n.toUpperCase();
+}
 function nextCheer(discipline) {
   const deckName = CHEER_DECK_FOR[discipline] || discipline;
   const deck = CHEER_DECKS[deckName];
+  if (nickRoll()) return nickLine(NICK_DECKS[deckName] && Math.random() >= 1 / 5 ? deckName : "generic");
   if (deck && Math.random() >= 1 / 5) return drawFromDeck(deckName, deck);
   return drawFromDeck("generic", CHEERS);
 }
@@ -4805,10 +4844,11 @@ function sessionsThisWeek() {
 }
 function celebrate(discipline, detail) {
   const name = discipline ? String(discipline).toLowerCase() : "session";
-  const line = nextCheer(discipline).replace("{d}", name);
+  let line = nextCheer(discipline).replace("{d}", name);
   const emoji = CHEER_EMOJI[Math.floor(Math.random() * CHEER_EMOJI.length)];
   const cfg = DISCIPLINE_CONFIG[discipline] || {};
   const firstOfWeek = sessionsThisWeek() === 1;
+  if (firstOfWeek && nick()) line = withNick("First one of the week, {nick}. Here we go.");
   const st = trainStreak();
   showPop({ emoji, line, color: cfg.color,
     sub: `${cfg.icon || ""} ${escapeHtml(String(discipline || "").toUpperCase())} LOGGED${detail ? " · " + escapeHtml(detail) : ""}${firstOfWeek ? " · FIRST OF THE WEEK" : st >= 2 ? " · 🔥 " + st + " DAYS" : ""}` });
@@ -4854,10 +4894,10 @@ function checkMilestones() {
   if (!fresh.length) return;
   const top = Math.max(...fresh);
   if (top === 100) {
-    showPop({ emoji: "🏆", line: "GOAL SMASHED. You absolute legend.", color: "#e8f84a", big: true,
+    showPop({ emoji: "🏆", line: nick() ? withNick("GOAL SMASHED, {nick}. You absolute legend.") : "GOAL SMASHED. You absolute legend.", color: "#e8f84a", big: true,
       sub: `🎯 ${fmtKg(daily.wset.goal)} KG · 7-DAY AVG ${fmtKg(ws.cur.avg)}` });
   } else {
-    showPop({ emoji: top === 20 ? "📉" : top === 50 ? "⚡" : "🏁", line: drawFromDeck("w" + top, MILESTONE_LINES[top]), color: "#e8f84a",
+    showPop({ emoji: top === 20 ? "📉" : top === 50 ? "⚡" : "🏁", line: nick() ? withNick({ 20: "20% there, {nick}. The scales are noticing.", 50: "Halfway, {nick}!", 90: "Final stretch, {nick}. Bring it home." }[top]) : drawFromDeck("w" + top, MILESTONE_LINES[top]), color: "#e8f84a",
       sub: `${top}% TO GOAL · ${fmtKg(Math.max(0, ws.toGo))} KG TO GO` });
   }
 }
@@ -4933,7 +4973,7 @@ function render() {
     <div class="header">
       <div class="title">
         <div class="title-left">
-          <span class="title-date">${new Date().toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" }).toUpperCase()}</span>
+          <span class="title-date">${new Date().toLocaleDateString("en-AU", greeting() ? { weekday: "short", day: "numeric", month: "short" } : { weekday: "long", day: "numeric", month: "long" }).toUpperCase().replace(/,/g, "")}${greeting() ? `<span class="title-hi"> · ${escapeHtml(greeting())}</span>` : ""}</span>
         </div>
         <div class="title-actions">
           <button class="menu-btn" id="openMenu" aria-label="Menu">⋯</button>
@@ -6667,6 +6707,7 @@ function attachHandlers() {
   // Menu
   const openMenu = document.getElementById("openMenu");
   if (openMenu) openMenu.addEventListener("click", () => {
+    document.getElementById("nickDisplay").textContent = nick();
     syncBodyweight();
     document.getElementById("weightDisplay").textContent = fmtKg(state.weight, 1) + " kg" + (state.bwMode === "manual" ? "" : " · AUTO");
     document.getElementById("menuVer").textContent = "HQ v" + APP_VERSION;
@@ -7021,6 +7062,14 @@ function setupMenu() {
   attachSheetSwipe(document.getElementById("workoutSheet"), document.querySelector("#workoutSheet .workout-sheet-inner"));
   attachSheetSwipe(document.getElementById("discSheet"), document.querySelector("#discSheet .workout-sheet-inner"));
 
+  document.getElementById("nickBtn").addEventListener("click", () => {
+    const v = prompt("Your nickname (used in pop-ups and the Today greeting). Leave blank to turn off.", nick());
+    if (v === null) return;
+    profile.nick = v.trim().slice(0, 16); saveProfile();
+    document.getElementById("nickDisplay").textContent = nick();
+    sheet.classList.remove("open"); render();
+    showToast(nick() ? `Hey ${nick()} 👋` : "Nickname off");
+  });
   const xSheet = document.getElementById("extraSheet"), xBox = document.getElementById("extraContent");
   document.getElementById("app").addEventListener("click", e => {
     const stb = e.target.closest("[data-steps-toggle]");
