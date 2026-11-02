@@ -2307,7 +2307,7 @@ img, svg { -webkit-user-drag: none; }
       <button class="menu-item" id="exportBtn"><span class="menu-icon">⬇</span>Export backup (JSON)</button>
       <button class="menu-item" id="importBtn"><span class="menu-icon">⬆</span>Import backup (JSON)</button>
       <button class="menu-item" id="importAppleBtn"><span class="menu-icon">⌚</span>Import from Apple Health</button>
-      <button class="menu-item" id="calFixBtn"><span class="menu-icon">🔥</span>Update past calories</button>
+      <button class="menu-item" id="calFixBtn"><span class="menu-icon">🔥</span><span id="calFixLabel">Update past calories</span></button>
       <button class="menu-item" id="restoreBtn"><span class="menu-icon">🛟</span>Recent backups</button>
       <button class="menu-item danger" id="clearBtn"><span class="menu-icon">🗑</span>Clear all data</button>
     </div>
@@ -2644,7 +2644,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "3.8";
+const APP_VERSION = "3.9";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -3389,23 +3389,79 @@ function sessionMets(s) {
   const newMet = special || metFor(s.discipline, s.subType, dur, d.distance, d.avgSplit, d.type, d.incline);
   return { oldMet, newMet, dur };
 }
+// v3.9: tight match (±4 kg) and the original numbers are kept, so it can be undone.
+const CAL_MIGRATION_KEY2 = "hq:cal-net-v2";
+function netFromOld(s, cal, tolKg) {
+  const { oldMet, newMet, dur } = sessionMets(s);
+  if (!(dur > 0) || !(oldMet > 0) || !(cal > 0)) return null;
+  const impliedKg = cal / (oldMet * dur / 60);
+  if (Math.abs(impliedKg - (state.weight || 94)) > tolKg) return null;
+  const next = Math.round(Math.max(newMet - 1, 0.3) * impliedKg * dur / 60);
+  return next !== cal ? next : null;
+}
+// Exact match only: HQ filled calories using your bodyweight on the day (7-day avg,
+// or the manual setting). If the number equals that to the calorie, it's HQ's.
+function exactNetFromOld(s, cal) {
+  const { oldMet, newMet, dur } = sessionMets(s);
+  if (!(dur > 0) || !(oldMet > 0) || !(cal > 0)) return null;
+  const a = weightAvg(s.date);
+  const kgs = [a ? round1(a.avg) : null, state.bwManual, state.weight, 94].filter(k => k > 0);
+  let kg = kgs.find(k => Math.round(oldMet * k * dur / 60) === cal);
+  if (!kg && /^Estimated from Apple/.test((s.data && s.data.details) || "")) kg = cal / (oldMet * dur / 60);   // walks I estimated for Leigh
+  if (!kg) return null;
+  const next = Math.round(Math.max(newMet - 1, 0.3) * kg * dur / 60);
+  return next !== cal ? next : null;
+}
 function migrateNetCalories(dryRun) {
-  let n = 0;
-  const kgNow = state.weight || 94;
+  const orig = {};
   state.sessions.forEach(s => {
     const d = s.data || {}, cal = parseFloat(d.calories);
-    if (!(cal > 0)) return;
-    const { oldMet, newMet, dur } = sessionMets(s);
-    if (!(dur > 0) || !(oldMet > 0)) return;
-    const impliedKg = cal / (oldMet * dur / 60);
-    if (Math.abs(impliedKg - kgNow) > 12) return;            // not HQ's number: leave it
-    const next = Math.round(Math.max(newMet - 1, 0.3) * impliedKg * dur / 60);
-    if (next !== cal) { n++; if (!dryRun) d.calories = String(next); }
+    const next = exactNetFromOld(s, cal);
+    if (next == null) return;
+    orig[s.id] = d.calories;
+    if (!dryRun) d.calories = String(next);
   });
+  const n = Object.keys(orig).length;
   if (dryRun) return n;
   if (n) saveSessions();
-  lsSet(CAL_MIGRATION_KEY, { at: new Date().toISOString(), changed: n });
+  lsSet(CAL_MIGRATION_KEY2, { at: new Date().toISOString(), orig });
   return n;
+}
+function undoCaloriesV2() {
+  const rec = lsGet(CAL_MIGRATION_KEY2, null); if (!rec || !rec.orig) return 0;
+  let n = 0;
+  state.sessions.forEach(s => { if (rec.orig[s.id] != null) { s.data.calories = rec.orig[s.id]; n++; } });
+  saveSessions(); localStorage.removeItem(CAL_MIGRATION_KEY2);
+  return n;
+}
+// Undo the v3.8 update (wide match, no originals kept): pull the old number back
+// from the weekly snapshots, but only where today's number is exactly what the
+// v3.8 update would have produced from it — so later edits are left alone.
+function undoCaloriesV1(dryRun) {
+  const snaps = loadSnapshots();            // newest first
+  let restored = 0; const missing = [];
+  state.sessions.forEach(s => {
+    const cur = parseFloat(s.data && s.data.calories);
+    if (!(cur > 0)) return;
+    let found = false;
+    for (const snap of snaps) {
+      const old = (snap.data || []).find(x => x.id === s.id);
+      if (!old) continue;
+      found = true;
+      const oc = parseFloat(old.data && old.data.calories);
+      if (oc > 0 && oc !== cur && netFromOld(old, oc, 12) === cur) {
+        restored++; if (!dryRun) s.data.calories = old.data.calories;
+      }
+      break;
+    }
+    if (!found) {
+      // logged after the last snapshot: check whether v3.8 could have changed it
+      const { oldMet, newMet, dur } = sessionMets(s);
+      if (dur > 0 && oldMet > 0 && Math.abs(cur / ((Math.max(newMet - 1, 0.3)) * dur / 60) - (state.weight || 94)) <= 12) missing.push(s);
+    }
+  });
+  if (!dryRun && restored) saveSessions();
+  return { restored, missing };
 }
 
 // =====================================================================
@@ -6750,6 +6806,8 @@ function attachHandlers() {
   if (openMenu) openMenu.addEventListener("click", () => {
     document.getElementById("nickDisplay").textContent = nick();
     syncBodyweight();
+    { const v1 = lsGet(CAL_MIGRATION_KEY, null), v2 = lsGet(CAL_MIGRATION_KEY2, null);
+      document.getElementById("calFixLabel").textContent = (v1 && !v1.undone) || v2 ? "Undo calorie update" : "Update past calories"; }
     document.getElementById("weightDisplay").textContent = fmtKg(state.weight, 1) + " kg" + (state.bwMode === "manual" ? "" : " · AUTO");
     document.getElementById("menuVer").textContent = "HQ v" + APP_VERSION;
     setBackupGroup(false);
@@ -7105,13 +7163,27 @@ function setupMenu() {
 
   document.getElementById("calFixBtn").addEventListener("click", () => {
     sheet.classList.remove("open");
-    const done = lsGet(CAL_MIGRATION_KEY, null);
-    if (done) { showToast("Already updated on " + shortDate(String(done.at).slice(0, 10))); return; }
+    const v1 = lsGet(CAL_MIGRATION_KEY, null), v2 = lsGet(CAL_MIGRATION_KEY2, null);
+    if (v1 && !v1.undone) {
+      const chk = undoCaloriesV1(true);
+      const miss = chk.missing.length ? `\n\n${chk.missing.length === 1 ? "1 session" : chk.missing.length + " sessions"} logged in the last few days ${chk.missing.length === 1 ? "isn't" : "aren't"} in a snapshot, so check those by hand: ${chk.missing.map(x => shortDate(x.date) + " " + x.discipline).join(", ")}.` : "";
+      if (!confirm(`Undo the calorie update? ${chk.restored} session${chk.restored === 1 ? "" : "s"} will get their original numbers back from HQ's automatic snapshots.${miss}`)) return;
+      const r = undoCaloriesV1(false);
+      lsSet(CAL_MIGRATION_KEY, Object.assign({}, v1, { undone: new Date().toISOString(), restored: r.restored }));
+      render(); showToast(`Restored ${r.restored} session${r.restored === 1 ? "" : "s"}`);
+      return;
+    }
+    if (v2) {
+      const k = Object.keys(v2.orig || {}).length;
+      if (!confirm(`Undo the calorie update from ${shortDate(localISO(new Date(v2.at)))}? ${k === 1 ? "1 session goes" : k + " sessions go"} back to the old numbers.`)) return;
+      const r = undoCaloriesV2(); render(); showToast(`Restored ${r} session${r === 1 ? "" : "s"}`);
+      return;
+    }
     const n = migrateNetCalories(true);
-    if (!n) { lsSet(CAL_MIGRATION_KEY, { at: new Date().toISOString(), changed: 0 }); showToast("Past calories are already up to date"); return; }
-    if (!confirm(`Update calories on ${n} past session${n === 1 ? "" : "s"} to active calories (resting burn removed)?\n\nOnly numbers HQ worked out are changed. Ones you typed in or imported from Apple stay as they are. Tip: export a backup first.`)) return;
+    if (!n) { showToast("No HQ-calculated calories to update"); return; }
+    if (!confirm(`Update calories on ${n} past session${n === 1 ? "" : "s"} to active calories (resting burn removed)?\n\nOnly numbers that match HQ's own formula to the calorie (at your weight on that day) are changed. Anything you typed or imported stays. You can undo this from the same menu item.`)) return;
     migrateNetCalories(false); render();
-    showToast(`Updated ${n} session${n === 1 ? "" : "s"}`);
+    showToast(`Updated ${n} session${n === 1 ? "" : "s"} · tap again to undo`);
   });
   document.getElementById("nickBtn").addEventListener("click", () => {
     const v = prompt("Your nickname (used in pop-ups and the Today greeting). Leave blank to turn off.", nick());
