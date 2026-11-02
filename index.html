@@ -2307,6 +2307,7 @@ img, svg { -webkit-user-drag: none; }
       <button class="menu-item" id="exportBtn"><span class="menu-icon">⬇</span>Export backup (JSON)</button>
       <button class="menu-item" id="importBtn"><span class="menu-icon">⬆</span>Import backup (JSON)</button>
       <button class="menu-item" id="importAppleBtn"><span class="menu-icon">⌚</span>Import from Apple Health</button>
+      <button class="menu-item" id="calFixBtn"><span class="menu-icon">🔥</span>Update past calories</button>
       <button class="menu-item" id="restoreBtn"><span class="menu-icon">🛟</span>Recent backups</button>
       <button class="menu-item danger" id="clearBtn"><span class="menu-icon">🗑</span>Clear all data</button>
     </div>
@@ -2584,7 +2585,7 @@ const DISCIPLINE_CONFIG = {
     color: "#94a3b8", icon: "🌿", met: 3,
     subTypes: {
       Walk: {
-        icon: "🚶", met: 5,
+        icon: "🚶", met: 3.5,
         fields: [
           { key: "duration", label: "Duration (min)", type: "number" },
           { key: "distance", label: "Distance (km)", type: "number", step: "0.1" },
@@ -2643,7 +2644,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "3.7";
+const APP_VERSION = "3.8";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -3063,11 +3064,13 @@ function parseAppleHealthXML(xmlText) {
 
     // Calories — same dual-format pattern as distance.
     let calories = parseFloat(w.getAttribute("totalEnergyBurned")) || 0;
+    let calUnit = w.getAttribute("totalEnergyBurnedUnit") || "kcal";
     if (!calories) {
       const calStat = Array.from(w.querySelectorAll("WorkoutStatistics"))
         .find(s => /ActiveEnergyBurned/.test(s.getAttribute("type") || ""));
-      if (calStat) calories = parseFloat(calStat.getAttribute("sum")) || 0;
+      if (calStat) { calories = parseFloat(calStat.getAttribute("sum")) || 0; calUnit = calStat.getAttribute("unit") || calUnit; }
     }
+    if (/kJ/i.test(calUnit)) calories = calories / 4.184;   // Australian iPhones often export kJ
     calories = Math.round(calories);
 
     const mapped = mapAppleActivity(w.getAttribute("workoutActivityType"));
@@ -3305,11 +3308,13 @@ function rowingMetFromPower(watts) {
   const slope = (y2 - y1) / (x2 - x1);
   return y2 + slope * (watts - x2);
 }
+let MET_LEGACY = false;   // true only while recalculating old sessions (pre-v3.8 rules)
 function metFor(discipline, subType, duration, distance, splitStr, typeName, incline) {
   // Priority: subType.met → tier cfg.met → MET_DEFAULTS → 5
   const tierCfg = DISCIPLINE_CONFIG[discipline];
   const stCfg = (tierCfg?.subTypes && subType) ? tierCfg.subTypes[subType] : null;
-  const baseMET = stCfg?.met ?? tierCfg?.met ?? MET_DEFAULTS[discipline] ?? 5;
+  let baseMET = stCfg?.met ?? tierCfg?.met ?? MET_DEFAULTS[discipline] ?? 5;
+  if (MET_LEGACY && discipline === "Chilled" && subType === "Walk") baseMET = 5;
   const dur = parseFloat(duration), dist = parseFloat(distance);
   if (!dur || dur <= 0) return baseMET;
   // Run: refine by pace (min/km)
@@ -3336,7 +3341,7 @@ function metFor(discipline, subType, duration, distance, splitStr, typeName, inc
   // Walk: by speed, from the 2024 Compendium walking table. With a treadmill
   // incline, use the ACSM walking equation instead (it includes the climb):
   //   VO2 = 0.1*speed + 1.8*speed*grade + 3.5  (speed in m/min), MET = VO2 / 3.5
-  if (discipline === "Chilled" && subType === "Walk" && dist > 0) {
+  if (((discipline === "Chilled" && subType === "Walk") || (discipline === "Walk" && !MET_LEGACY)) && dist > 0) {
     const kmh = (dist / dur) * 60;
     const grade = (parseFloat(incline) || 0) / 100;
     if (grade > 0) {
@@ -3364,7 +3369,43 @@ function calcCalories(discipline, subType, duration, distance, splitStr, typeNam
   if (!dur || dur <= 0) return "";
   const weight = state.weight || 94;
   const met = metFor(discipline, subType, duration, distance, splitStr, typeName, incline);
-  return String(Math.round(met * weight * (dur / 60)));
+  return String(netKcal(met, weight, dur));
+}
+// Active calories only: leave out the ~1 MET you'd burn anyway at rest,
+// so HQ matches Apple's "active calories" and food-tracking maths.
+function netKcal(met, kg, minutes) { return Math.round(Math.max(met - 1, 0.3) * kg * (minutes / 60)); }
+
+// One-off (v3.8): convert auto-filled calories on past sessions to the new
+// active-only numbers. A session counts as auto-filled when its calories fit
+// the old formula at a plausible bodyweight; typed-in or Apple numbers won't.
+const CAL_MIGRATION_KEY = "hq:cal-net-v1";
+function sessionMets(s) {
+  const d = s.data || {}, dur = parseFloat(d.duration);
+  const wk = WORKOUTS.find(w => w.title === d.type);
+  const special = d.type === "Custom Timer" ? 5 : wk ? (wk.met || MET_DEFAULTS.Strength || 5) : null;
+  MET_LEGACY = true;
+  const oldMet = special || metFor(s.discipline, s.subType, dur, d.distance, d.avgSplit, d.type, d.incline);
+  MET_LEGACY = false;
+  const newMet = special || metFor(s.discipline, s.subType, dur, d.distance, d.avgSplit, d.type, d.incline);
+  return { oldMet, newMet, dur };
+}
+function migrateNetCalories(dryRun) {
+  let n = 0;
+  const kgNow = state.weight || 94;
+  state.sessions.forEach(s => {
+    const d = s.data || {}, cal = parseFloat(d.calories);
+    if (!(cal > 0)) return;
+    const { oldMet, newMet, dur } = sessionMets(s);
+    if (!(dur > 0) || !(oldMet > 0)) return;
+    const impliedKg = cal / (oldMet * dur / 60);
+    if (Math.abs(impliedKg - kgNow) > 12) return;            // not HQ's number: leave it
+    const next = Math.round(Math.max(newMet - 1, 0.3) * impliedKg * dur / 60);
+    if (next !== cal) { n++; if (!dryRun) d.calories = String(next); }
+  });
+  if (dryRun) return n;
+  if (n) saveSessions();
+  lsSet(CAL_MIGRATION_KEY, { at: new Date().toISOString(), changed: n });
+  return n;
 }
 
 // =====================================================================
@@ -5735,7 +5776,7 @@ function finishCustomTimer() {
   if (elapsedMin >= 2) {
     state.sessions.push({
       id: uid(), date: todayISO(), discipline: "Strength",
-      data: { duration: String(elapsedMin), type: "Custom Timer", details: `${t.settings.rounds} rounds · ${t.settings.intervals} intervals`, calories: String(Math.round(5 * (state.weight||94) * (elapsedMin/60))) }
+      data: { duration: String(elapsedMin), type: "Custom Timer", details: `${t.settings.rounds} rounds · ${t.settings.intervals} intervals`, calories: String(netKcal(5, state.weight || 94, elapsedMin)) }
     });
     saveSessions();
     celebrate("Strength", `${elapsedMin} MIN`);
@@ -6044,7 +6085,7 @@ function logWorkoutSession(elapsedMin, completed) {
   // ≈ 250 kcal). Fall back to the Strength default if a workout omits it.
   const met = workout.met || MET_DEFAULTS.Strength || 5;
   const weight = state.weight || 94;
-  const calories = String(Math.round(met * weight * (finalMin / 60)));
+  const calories = String(netKcal(met, weight, finalMin));
   state.sessions.push({
     id: uid(),
     date: todayISO(),
@@ -7062,6 +7103,16 @@ function setupMenu() {
   attachSheetSwipe(document.getElementById("workoutSheet"), document.querySelector("#workoutSheet .workout-sheet-inner"));
   attachSheetSwipe(document.getElementById("discSheet"), document.querySelector("#discSheet .workout-sheet-inner"));
 
+  document.getElementById("calFixBtn").addEventListener("click", () => {
+    sheet.classList.remove("open");
+    const done = lsGet(CAL_MIGRATION_KEY, null);
+    if (done) { showToast("Already updated on " + shortDate(String(done.at).slice(0, 10))); return; }
+    const n = migrateNetCalories(true);
+    if (!n) { lsSet(CAL_MIGRATION_KEY, { at: new Date().toISOString(), changed: 0 }); showToast("Past calories are already up to date"); return; }
+    if (!confirm(`Update calories on ${n} past session${n === 1 ? "" : "s"} to active calories (resting burn removed)?\n\nOnly numbers HQ worked out are changed. Ones you typed in or imported from Apple stay as they are. Tip: export a backup first.`)) return;
+    migrateNetCalories(false); render();
+    showToast(`Updated ${n} session${n === 1 ? "" : "s"}`);
+  });
   document.getElementById("nickBtn").addEventListener("click", () => {
     const v = prompt("Your nickname (used in pop-ups and the Today greeting). Leave blank to turn off.", nick());
     if (v === null) return;
@@ -8537,7 +8588,7 @@ function reach_showComplete(){
   const minsLogged = Math.round(reach_sessionMinutesFor(reach_previewItems));
   // Auto-log the stretch session
   if(minsLogged >= 1){
-    const calories = String(Math.round(MET_DEFAULTS.Stretch * (state.weight||80) * (minsLogged/60)));
+    const calories = String(netKcal(MET_DEFAULTS.Stretch, state.weight || 80, minsLogged));
     state.sessions.push({
       id: uid(), date: todayISO(), discipline: 'Stretch',
       data: { duration: String(minsLogged), calories }
