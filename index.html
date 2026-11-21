@@ -2652,7 +2652,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "4.1";
+const APP_VERSION = "4.2";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -3762,11 +3762,10 @@ function renderWeightChart(days, compact) {
   const avg = pts.map(([k]) => [k, weightAvg(k).avg]);
   const tr = weightTrend(t);
   const ext = compact || !tr ? 0 : 14;                // project the trend 2 weeks ahead
-  let end = addDaysISO(t, ext);
-  // Milestone: draw its straight on-track line, stretching the chart to its date (up to 60 days out)
-  const msC = compact ? null : msStatus(weightStatus());
-  const msOn = msC && msC.ready && !msC.hit && msC.m.date >= from;
-  if (msOn && msC.m.date > end && daysBetweenISO(t, msC.m.date) <= 60) end = msC.m.date;
+  const end = addDaysISO(t, ext);
+  // Milestone: a flat line at its target weight (the main line); the goal stays as a fainter line
+  const msC = msStatus(weightStatus());
+  const msOn = !!(msC && msC.ready && !msC.hit);
   const W = 440, H = compact ? 130 : 230, pl = 38, pr = 8, pt = 8, pb = compact ? 6 : 24;
   const total = Math.max(1, daysBetweenISO(from, end));
   const X = d => pl + daysBetweenISO(from, d) / total * (W - pl - pr);
@@ -3781,13 +3780,7 @@ function renderWeightChart(days, compact) {
     seg = [x0, f(x0), end, f(end)];
     ys.push(seg[1], seg[3]);
   }
-  let msSeg = null;
-  if (msOn) {
-    const m = msC.m, span = Math.max(1, daysBetweenISO(m.fromDate, m.date));
-    const at = d => m.fromKg + (m.kg - m.fromKg) * (daysBetweenISO(m.fromDate, d) / span);
-    const a = m.fromDate < from ? from : m.fromDate, b = m.date > end ? end : m.date;
-    if (a < b) { msSeg = [a, at(a), b, at(b), b === m.date]; ys.push(msSeg[1], msSeg[3]); }
-  }
+  if (msOn) ys.push(msC.m.kg);
   let lo = Math.min(...ys), hi = Math.max(...ys);
   if (hi - lo < 1) { const m = (hi + lo) / 2; lo = m - 0.5; hi = m + 0.5; }
   const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
@@ -3805,13 +3798,12 @@ function renderWeightChart(days, compact) {
     ref += `<line x1="${pl}" x2="${W - pr}" y1="${Y(s.baseline)}" y2="${Y(s.baseline)}" stroke="${WCOL.goal}" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.8"/>`;
   }
   if (s.mode === "goal" && typeof s.goal === "number") {
-    ref += `<line x1="${pl}" x2="${W - pr}" y1="${Y(s.goal)}" y2="${Y(s.goal)}" stroke="${WCOL.goal}" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+    ref += `<line x1="${pl}" x2="${W - pr}" y1="${Y(s.goal)}" y2="${Y(s.goal)}" stroke="${WCOL.goal}" stroke-width="${msOn ? 1.2 : 1.5}" stroke-dasharray="4 4" opacity="${msOn ? 0.5 : 1}"/>`;
   }
   if (ext) ref += `<line x1="${X(t)}" x2="${X(t)}" y1="${pt}" y2="${H - pb}" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>`;
   const dots = pts.map(([k, w]) => `<circle cx="${X(k)}" cy="${Y(w)}" r="${compact ? 2.2 : 2.8}" fill="${WCOL.dot}" opacity="0.75"><title>${shortDate(k)}: ${fmtKg(w)} kg</title></circle>`).join("");
   const line = avg.length > 1 ? `<polyline points="${avg.map(([k, v]) => `${X(k)},${Y(v)}`).join(" ")}" fill="none" stroke="${WCOL.avg}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>` : "";
-  const msLine = msSeg ? `<line x1="${X(msSeg[0])}" y1="${Y(msSeg[1])}" x2="${X(msSeg[2])}" y2="${Y(msSeg[3])}" stroke="${WCOL.ms}" stroke-width="2" stroke-dasharray="2 4" stroke-linecap="round" opacity="0.85"/>`
-    + (msSeg[4] ? `<circle cx="${X(msSeg[2])}" cy="${Y(msSeg[3])}" r="4" fill="${WCOL.ms}"/>` : "") : "";
+  const msLine = msOn ? `<line x1="${pl}" x2="${W - pr}" y1="${Y(msC.m.kg)}" y2="${Y(msC.m.kg)}" stroke="${WCOL.ms}" stroke-width="2" stroke-dasharray="6 4"/>` : "";
   const trend = seg ? `<line x1="${X(seg[0])}" y1="${Y(seg[1])}" x2="${X(seg[2])}" y2="${Y(seg[3])}" stroke="${WCOL.trend}" stroke-width="2" stroke-dasharray="5 4" opacity="0.9"/>` : "";
   let xl = "";
   if (!compact) {
@@ -3828,7 +3820,7 @@ function renderWeightChart(days, compact) {
   if (compact) return svg;
   let leg = `<span><i class="dot" style="background:${WCOL.dot}"></i>DAILY</span><span><i style="border-color:${WCOL.avg}"></i>7-DAY AVG</span>${tr ? `<span><i class="dash" style="border-color:${WCOL.trend}"></i>TREND</span>` : ""}`;
   if (s.mode === "goal" && typeof s.goal === "number") leg += `<span><i class="dash" style="border-color:${WCOL.goal}"></i>GOAL</span>`;
-  if (msSeg) leg += `<span><i class="dash" style="border-color:${WCOL.ms}"></i>MILESTONE</span>`;
+  if (msOn) leg += `<span><i class="dash" style="border-color:${WCOL.ms}"></i>MILESTONE</span>`;
   if (s.mode === "maintain" && typeof s.baseline === "number") leg += `<span><i class="band" style="background:rgba(163,230,53,0.3)"></i>±${fmtKg(s.band, 1)} BAND</span>`;
   return svg + `<div class="w-readout" id="wReadout">${wChartPts.length ? "TAP FOR ANY DAY" : ""}</div><div class="w-legend">${leg}</div>`;
 }
