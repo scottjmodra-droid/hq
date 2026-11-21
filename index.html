@@ -2250,6 +2250,14 @@ img, svg { -webkit-user-drag: none; }
   -webkit-mask-image: linear-gradient(180deg, #000 88%, transparent); mask-image: linear-gradient(180deg, #000 88%, transparent); }
 .title-hi { color: #e8f84a; }
 .title-date { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ms-main { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 1.2px; color: #fff; }
+.ms-ab { font-size: 13px; letter-spacing: 1.2px; padding: 3px 8px; border-radius: 999px; background: rgba(255,255,255,0.08); color: #c8a8e8; }
+.ms-ab.ahead { color: #a3e635; background: rgba(163,230,53,0.12); }
+.ms-ab.behind { color: #fb923c; background: rgba(251,146,60,0.12); }
+.ms-sub { text-align: center; margin-top: 4px; font-size: 12px; letter-spacing: 1px; color: #9684b8; }
+.ds-date { width: 150px; }
+.ms-hist-h { margin-top: 14px; font-size: 11px; letter-spacing: 1.5px; color: #9684b8; }
+.ms-hist { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; padding: 6px 0; font-size: 13px; color: #d4baeb; border-bottom: 1px solid rgba(255,255,255,0.05); }
 .w-hero { display: flex; align-items: baseline; gap: 12px; margin-top: 14px; }
 .w-wk { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.5px; color: #fff; }
 .w-wk small { font-size: 13px; letter-spacing: 1.5px; color: #9684b8; }
@@ -2644,7 +2652,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "3.9";
+const APP_VERSION = "4.0";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -3508,6 +3516,63 @@ const daily = {
 };
 function saveWeights() { lsSet(WEIGHT_KEY, daily.weights); }
 function saveWeightSettings() { lsSet(WEIGHT_SETTINGS_KEY, daily.wset); }
+
+// ---- Milestone: a short-term target on the way to the goal (goal mode only) ----
+// wset.ms = { on, kg, date, fromKg, fromDate, hitDate }, wset.msHistory = [{ kg, date, fromKg, fromDate, hitDate }]
+// Nothing is ever set automatically: it's off until you switch it on in settings.
+function msCfg() { const m = daily.wset.ms; return m && typeof m === "object" ? m : null; }
+function msStatus(ws) {
+  const s = daily.wset, m = msCfg();
+  if (s.mode !== "goal" || !m || !m.on) return null;
+  const ok = typeof m.kg === "number" && typeof m.fromKg === "number" && m.date && m.fromDate;
+  const out = { m, ready: ok && !!ws.cur };
+  if (!out.ready) return out;
+  const t = todayISO(), cur = ws.cur.avg, dir = m.fromKg >= m.kg ? 1 : -1;
+  out.toGo = (cur - m.kg) * dir;
+  out.progress = m.fromKg === m.kg ? 1 : Math.max(0, Math.min(1, (m.fromKg - cur) / (m.fromKg - m.kg)));
+  out.hit = !!m.hitDate;
+  const span = Math.max(1, daysBetweenISO(m.fromDate, m.date));
+  const f = Math.max(0, Math.min(1, daysBetweenISO(m.fromDate, t) / span));
+  out.expected = m.fromKg + (m.kg - m.fromKg) * f;              // straight line from start to target
+  out.ahead = (out.expected - cur) * dir;                        // + ahead, − behind
+  out.overdue = !out.hit && t > m.date;
+  if (typeof s.goal === "number") out.goalToGo = Math.max(0, (cur - s.goal) * (s.start != null && s.start < s.goal ? -1 : 1));
+  return out;
+}
+// Mark the milestone hit (7-day avg at or past it). Pop-up only when fromSave.
+function checkMsHit(fromSave) {
+  const m = msCfg(); if (!m || !m.on || m.hitDate) return;
+  const ms = msStatus(weightStatus()); if (!ms || !ms.ready || ms.toGo > 0) return;
+  m.hitDate = todayISO();
+  daily.wset.msHistory = (daily.wset.msHistory || []).concat([{ kg: m.kg, date: m.date, fromKg: m.fromKg, fromDate: m.fromDate, hitDate: m.hitDate }]).slice(-12);
+  saveWeightSettings();
+  if (fromSave) showPop({ emoji: "🏁", color: "#e8f84a",
+    line: nick() ? withNick(`Milestone smashed, {nick}. ${fmtKg(m.kg, 0)} down.`) : `Milestone smashed. ${fmtKg(m.kg, 0)} down.`,
+    sub: `🏁 ${fmtKg(m.kg)} KG${m.hitDate <= m.date ? " · " + daysBetweenISO(m.hitDate, m.date) + " DAYS EARLY" : ""}` });
+}
+function msAheadHTML(ms) {
+  if (ms.hit || ms.ahead == null) return "";
+  if (ms.overdue) return `<span class="ms-ab behind">OVERDUE</span>`;
+  const a = ms.ahead;
+  if (Math.abs(a) < 0.05) return `<span class="ms-ab">ON TRACK</span>`;
+  return a > 0 ? `<span class="ms-ab ahead">▲ ${fmtKg(a)} AHEAD</span>` : `<span class="ms-ab behind">▼ ${fmtKg(-a)} BEHIND</span>`;
+}
+function renderMsGauge(ms, compact) {
+  const s = daily.wset, m = ms.m, pct = Math.round(ms.progress * 100);
+  const main = ms.hit ? `✓ ${fmtKg(m.kg)} HIT · ${shortDate(m.hitDate).toUpperCase()}` : `${fmtKg(Math.max(0, ms.toGo))} TO GO · ${shortDate(m.date).toUpperCase()}`;
+  if (compact) return `<div class="w-gauge t-gauge">
+      <div class="w-track"><div class="w-fill" style="width:${pct}%"></div><span class="w-pct">${pct}%</span></div>
+      <span class="t-goal">🏁 ${fmtKg(m.kg)}</span>
+    </div>`;
+  return `<div class="w-gauge">
+    <div class="w-track"><div class="w-fill" style="width:${pct}%"></div><span class="w-pct">${pct}%</span></div>
+    <div class="w-scale"><span>${fmtKg(m.fromKg)}</span><span>🏁 ${fmtKg(m.kg)}</span></div>
+    <div class="ms-main">${main}${msAheadHTML(ms)}</div>
+    ${typeof s.goal === "number" ? `<div class="ms-sub">Goal ${fmtKg(s.goal)} · ${ws_goalToGoTxt(ms)}</div>` : ""}
+    ${ms.hit ? `<div class="ds-actions"><button class="ghost-btn" data-ms-next>🏁 SET NEXT MILESTONE</button></div>` : ""}
+  </div>`;
+}
+function ws_goalToGoTxt(ms) { return ms.goalToGo <= 0 ? "reached 🎯" : fmtKg(ms.goalToGo) + " to go"; }
 function saveDrink() { lsSet(DRINK_KEY, daily.drink); lsSet(DRINK_COUNTS_KEY, daily.counts); }
 function saveDrinkSettings() { lsSet(DRINK_SETTINGS_KEY, daily.dset); }
 
@@ -3633,7 +3698,7 @@ function saveWeightEntry(dateISO, kg) {
   } else {
     showToast(kg == null ? "Weigh-in deleted" : `Saved ${fmtKg(kg)} kg`);
   }
-  if (kg != null) checkMilestones();
+  if (kg != null) { checkMilestones(); checkMsHit(true); }
   updateWeightBadge();
   render();
 }
@@ -3659,6 +3724,8 @@ function renderWeightBanner() {
 // ---- weight pieces ----
 function renderWeightGauge(ws) {
   const s = daily.wset;
+  const ms = msStatus(ws);
+  if (ms && ms.ready) return renderMsGauge(ms, false);
   if (s.mode === "goal" && typeof s.goal === "number" && ws.cur && ws.start != null) {
     const pct = Math.round((ws.progress || 0) * 100);
     const mid = ws.reached ? "🎯 DONE" : `${fmtKg(Math.max(0, ws.toGo))} TO GO${ws.eta ? " · " + shortDate(ws.eta).toUpperCase() : ""}`;
@@ -3785,7 +3852,9 @@ function renderToday() {
 }
 function renderTodayWeightCard() {
   const ws = weightStatus(), t = todayISO(), s = daily.wset, tw = daily.weights[t];
-  const chip = s.mode === "goal" && typeof s.goal === "number" ? `<span class="chip-mode">${ws.reached ? "🎯 GOAL REACHED" : ws.toGo != null ? fmtKg(Math.max(0, ws.toGo)) + " KG TO GO" : "GOAL " + fmtKg(s.goal)}</span>`
+  const msT = msStatus(ws);
+  const chip = msT && msT.ready ? `<span class="chip-mode">${msT.hit ? "🏁 " + fmtKg(msT.m.kg) + " HIT" : fmtKg(Math.max(0, msT.toGo)) + " TO " + fmtKg(msT.m.kg, 0) + " · " + shortDate(msT.m.date).toUpperCase()}</span>`
+    : s.mode === "goal" && typeof s.goal === "number" ? `<span class="chip-mode">${ws.reached ? "🎯 GOAL REACHED" : ws.toGo != null ? fmtKg(Math.max(0, ws.toGo)) + " KG TO GO" : "GOAL " + fmtKg(s.goal)}</span>`
     : s.mode === "maintain" && typeof s.baseline === "number" ? `<span class="chip-mode">MAINTAIN ${fmtKg(s.baseline)}</span>` : "";
   const wd = ws.weekDelta;
   const dCls = wd == null ? "" : wd > 0.05 ? "up" : wd < -0.05 ? "down" : "";
@@ -3806,6 +3875,8 @@ function renderTodayWeightCard() {
 }
 function renderTodayGauge(ws) {
   const s = daily.wset;
+  const ms = msStatus(ws);
+  if (ms && ms.ready) return renderMsGauge(ms, true);
   if (!(s.mode === "goal" && typeof s.goal === "number" && ws.cur && ws.start != null)) return renderWeightGauge(ws);
   const pct = Math.round(Math.max(0, Math.min(1, ws.progress || 0)) * 100);
   return `<div class="w-gauge t-gauge">
@@ -4085,8 +4156,19 @@ function renderWeightView() {
   const kgIn = (key, val) => `<input class="input ds-num w" type="number" inputmode="decimal" step="0.01" data-w-set="${key}" value="${val != null ? val : ""}">`;
   let fields = "";
   if (s.mode === "goal") {
+    const m = msCfg() || {};
+    const msIn = (key, val) => `<input class="input ds-num w" type="number" inputmode="decimal" step="0.01" data-ms-set="${key}" value="${val != null ? val : ""}">`;
+    const msDate = (key, val) => `<input class="input ds-date" type="date" data-ms-set="${key}" value="${val || ""}">`;
+    const hist = (s.msHistory || []).slice().reverse();
     fields = `<div class="ds-row"><span>🎯 Goal</span><div class="ds-in">${kgIn("goal", s.goal)} kg</div></div>
-      <div class="ds-row"><span>Starting weight</span><div class="ds-in">${kgIn("start", s.start)} kg</div></div>`;
+      <div class="ds-row"><span>Starting weight</span><div class="ds-in">${kgIn("start", s.start)} kg</div></div>
+      <div class="ds-row"><span>🏁 Milestone</span><button class="disc-tog ${m.on ? "on" : ""}" data-ms-toggle aria-label="Milestone on or off"><i></i></button></div>
+      ${m.on ? `<div class="ds-row"><span>Target</span><div class="ds-in">${msIn("kg", m.kg)} kg</div></div>
+      <div class="ds-row"><span>By</span><div class="ds-in">${msDate("date", m.date)}</div></div>
+      <div class="ds-row"><span>Starting from</span><div class="ds-in">${msIn("fromKg", m.fromKg)} kg</div></div>
+      <div class="ds-row"><span>On</span><div class="ds-in">${msDate("fromDate", m.fromDate)}</div></div>
+      ${m.hitDate ? `<div class="w-hint">✓ Hit on ${shortDate(m.hitDate)}. Set the next one when you're ready.</div>` : ""}` : ""}
+      ${hist.length ? `<div class="ms-hist-h">HIT MILESTONES</div>${hist.map(h => `<div class="ms-hist"><span>🏁 ${fmtKg(h.kg)}</span><span>due ${shortDate(h.date)}</span><span>hit ${shortDate(h.hitDate)}</span></div>`).join("")}` : ""}`;
   } else if (s.mode === "maintain") {
     fields = `<div class="ds-row"><span>Baseline${s.baselineDate ? ` <span style="color:#9684b8">since ${shortDate(s.baselineDate)}</span>` : ""}</span><div class="ds-in">${kgIn("baseline", s.baseline)} kg</div></div>
       <div class="ds-row"><span>Alert at ±</span><div class="ds-in">${kgIn("band", s.band)} kg</div></div>
@@ -4172,6 +4254,33 @@ function attachDailyHandlers() {
     else { showToast("Enter a weight in kg"); render(); return; }
     if (k === "baseline") s.baselineDate = todayISO();   // a new baseline starts a fresh alert history
     saveWeightSettings(); updateWeightBadge(); render();
+  });
+  on("[data-ms-toggle]", "click", () => {
+    const s = daily.wset, cur = weightAvg(todayISO());
+    const m = s.ms = Object.assign({ on: false, kg: null, date: null, fromKg: null, fromDate: null, hitDate: null }, s.ms || {});
+    m.on = !m.on;
+    if (m.on && m.fromKg == null && cur) { m.fromKg = round2(cur.avg); m.fromDate = todayISO(); }
+    saveWeightSettings(); checkMsHit(false); render();
+  });
+  on("[data-ms-set]", "change", el => {
+    const m = daily.wset.ms; if (!m) return;
+    const k = el.dataset.msSet;
+    if (k === "date" || k === "fromDate") m[k] = el.value || null;
+    else {
+      const v = parseFloat(String(el.value).replace(",", "."));
+      if (!isFinite(v)) m[k] = null;
+      else if (v >= 30 && v <= 250) m[k] = round2(v);
+      else { showToast("Enter a weight in kg"); render(); return; }
+    }
+    if (k === "kg" || k === "date") m.hitDate = null;     // a changed target is a new milestone
+    saveWeightSettings(); checkMsHit(false); render();
+  });
+  on("[data-ms-next]", "click", () => {
+    const m = daily.wset.ms, cur = weightAvg(todayISO()); if (!m) return;
+    Object.assign(m, { kg: null, date: null, hitDate: null, fromKg: cur ? round2(cur.avg) : m.kg, fromDate: todayISO() });
+    saveWeightSettings(); state.view = "weight"; render();
+    showToast("Enter the next milestone in settings below");
+    setTimeout(() => document.querySelector('[data-ms-set="kg"]')?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
   });
   on("[data-w-baseline-now]", "click", () => {
     const cur = weightAvg(todayISO()); if (!cur) return;
