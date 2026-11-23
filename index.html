@@ -2528,7 +2528,7 @@ const DISCIPLINE_CONFIG = {
   Swim: {
     color: "#38bdf8", icon: "🏊",
     fields: [
-      { key: "duration", label: "Duration (min)", type: "number" },
+      { key: "duration", label: "Duration (min)", type: "number", step: "0.1" },
       { key: "distance", label: "Distance (km)", type: "number", step: "0.1" },
       { key: "calories", label: "Calories", type: "number" },
     ],
@@ -2536,7 +2536,7 @@ const DISCIPLINE_CONFIG = {
   Run: {
     color: "#16a34a", icon: "🏃",
     fields: [
-      { key: "duration", label: "Duration (min)", type: "number" },
+      { key: "duration", label: "Duration (min)", type: "number", step: "0.1" },
       { key: "distance", label: "Distance (km)", type: "number", step: "0.1" },
       { key: "pace", label: "Avg Pace (min/km)", type: "text", placeholder: "auto-calculated, or e.g. 5:30" },
       { key: "calories", label: "Calories", type: "number" },
@@ -2545,7 +2545,7 @@ const DISCIPLINE_CONFIG = {
   Strength: {
     color: "#e8f84a", icon: "🏋️",
     fields: [
-      { key: "duration", label: "Duration (min)", type: "number" },
+      { key: "duration", label: "Duration (min)", type: "number", step: "0.1" },
       { key: "type", label: "Type (optional)", type: "text", placeholder: "e.g. Upper Push, Pull, Full Body" },
       { key: "calories", label: "Calories", type: "number" },
     ],
@@ -2557,7 +2557,7 @@ const DISCIPLINE_CONFIG = {
       Row: {
         icon: "🚣",
         fields: [
-          { key: "duration", label: "Duration (min)", type: "number" },
+          { key: "duration", label: "Duration (min)", type: "number", step: "0.1" },
           { key: "distance", label: "Distance (km)", type: "number", step: "0.1" },
           { key: "avgSplit", label: "Avg Split (/500m)", type: "text", placeholder: "auto-calculated, or e.g. 1:52" },
           { key: "calories", label: "Calories", type: "number" },
@@ -2566,14 +2566,14 @@ const DISCIPLINE_CONFIG = {
       Waterpolo: {
         icon: "🤽", met: 10,
         fields: [
-          { key: "duration", label: "Duration (min)", type: "number" },
+          { key: "duration", label: "Duration (min)", type: "number", step: "0.1" },
           { key: "calories", label: "Calories", type: "number" },
         ],
       },
       Cycling: {
         icon: "🚴", met: 7,
         fields: [
-          { key: "duration", label: "Duration (min)", type: "number" },
+          { key: "duration", label: "Duration (min)", type: "number", step: "0.1" },
           { key: "distance", label: "Distance (km)", type: "number", step: "0.1" },
           { key: "calories", label: "Calories", type: "number" },
         ],
@@ -2582,7 +2582,7 @@ const DISCIPLINE_CONFIG = {
         icon: "✦", met: 6,
         fields: [
           { key: "type", label: "Activity Type", type: "text", placeholder: "e.g. Boxing, Hiking, Tennis" },
-          { key: "duration", label: "Duration (min)", type: "number" },
+          { key: "duration", label: "Duration (min)", type: "number", step: "0.1" },
           { key: "distance", label: "Distance (km)", type: "number", step: "0.1" },
           { key: "calories", label: "Calories", type: "number" },
         ],
@@ -2595,7 +2595,7 @@ const DISCIPLINE_CONFIG = {
       Walk: {
         icon: "🚶", met: 3.5,
         fields: [
-          { key: "duration", label: "Duration (min)", type: "number" },
+          { key: "duration", label: "Duration (min)", type: "number", step: "0.1" },
           { key: "distance", label: "Distance (km)", type: "number", step: "0.1" },
           { key: "incline", label: "Incline (%)", type: "number", step: "0.5", placeholder: "treadmill only — leave blank if flat" },
           { key: "calories", label: "Calories", type: "number" },
@@ -2605,7 +2605,7 @@ const DISCIPLINE_CONFIG = {
         icon: "✦", met: 4,
         fields: [
           { key: "type", label: "Activity Type", type: "text", placeholder: "e.g. Golf, Gardening" },
-          { key: "duration", label: "Duration (min)", type: "number" },
+          { key: "duration", label: "Duration (min)", type: "number", step: "0.1" },
           { key: "distance", label: "Distance (km)", type: "number", step: "0.1" },
           { key: "calories", label: "Calories", type: "number" },
         ],
@@ -2615,7 +2615,7 @@ const DISCIPLINE_CONFIG = {
   Stretch: {
     color: "#8b5cf6", icon: "🧘", met: 2.3,
     fields: [
-      { key: "duration", label: "Duration (min)", type: "number" },
+      { key: "duration", label: "Duration (min)", type: "number", step: "0.1" },
       { key: "calories", label: "Calories", type: "number" },
     ],
   },
@@ -2652,7 +2652,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "4.2";
+const APP_VERSION = "4.3";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -4709,7 +4709,7 @@ const DISC_KEY = "hq:disciplines";
 const DISC_DEFAULT = ["Swim", "Run", "Strength", "Active", "Chilled", "Stretch"];
 const DISC_COLOURS = ["#38bdf8", "#16a34a", "#e8f84a", "#f97316", "#94a3b8", "#8b5cf6", "#2dd4bf", "#fb7185", "#c4b5fd", "#f59e0b", "#e879f9", "#ef4444"];
 const DISC_MET = { easy: 3, moderate: 5, hard: 8 };
-const F_DUR = { key: "duration", label: "Duration (min)", type: "number" };
+const F_DUR = { key: "duration", label: "Duration (min)", type: "number", step: "0.1" };
 const F_DIST = { key: "distance", label: "Distance (km)", type: "number", step: "0.1" };
 const F_CAL = { key: "calories", label: "Calories", type: "number" };
 const DISC_PRESETS = {
