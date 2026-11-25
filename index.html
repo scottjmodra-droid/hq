@@ -2298,6 +2298,8 @@ img, svg { -webkit-user-drag: none; }
 .drink-btn { flex-direction: row; justify-content: center; align-items: baseline; gap: 6px; padding: 10px 4px; }
 .mcol { gap: 3px; }
 .mchart { padding-bottom: 0; }
+.h-scroll { max-height: 380px; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding-bottom: 12px;
+  -webkit-mask-image: linear-gradient(180deg, #000 90%, transparent); mask-image: linear-gradient(180deg, #000 90%, transparent); }
 .w-hero { display: flex; align-items: baseline; gap: 12px; margin-top: 14px; }
 .w-wk { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.5px; color: #fff; }
 .w-wk small { font-size: 13px; letter-spacing: 1.5px; color: #9684b8; }
@@ -6710,7 +6712,7 @@ function renderDisciplineStats(discipline, period) {
         </div>
       `).join("")}
     </div>
-    <div class="history-list">
+    <div class="history-list${ds.length > 5 ? " h-scroll" : ""}">
       ${ds.slice().reverse().slice(0, 50).map(s => {
         if (s.id === state.editingId) return renderHistoryEdit(s, cfg);
         // Use the session's subType config for field display (subType-aware disciplines)
