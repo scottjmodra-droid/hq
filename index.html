@@ -2258,6 +2258,46 @@ img, svg { -webkit-user-drag: none; }
 .ds-date { width: 150px; }
 .ms-hist-h { margin-top: 14px; font-size: 11px; letter-spacing: 1.5px; color: #9684b8; }
 .ms-hist { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; padding: 6px 0; font-size: 13px; color: #d4baeb; border-bottom: 1px solid rgba(255,255,255,0.05); }
+/* ---- v4.4 compact pass: same look, tighter spacing ---- */
+.section { padding: 14px 16px; }
+.dcard { padding: 12px 14px; margin-bottom: 10px; }
+.dcard-h { margin-bottom: 9px; }
+.header { padding-bottom: 8px; }
+.header .title { margin-bottom: 6px; }
+.header .tab { padding: 10px 0 8px; }
+.header .tabs { padding: 4px; }
+.range-toggle { margin-bottom: 12px; }
+.range-btn { padding: 7px 4px; }
+.train-sub { margin-bottom: 12px; }
+.launch-row { margin: -6px 0 10px; }
+/* Train › Log */
+.discipline-grid { gap: 6px; margin-bottom: 12px; }
+.discipline-btn { min-height: 0; padding: 8px 6px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.discipline-btn .icon { font-size: 18px; }
+.discipline-btn .label { margin-top: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.subtype-row { margin-bottom: 12px; }
+.subtype-btn { flex-direction: row; justify-content: center; padding: 7px 6px; gap: 6px; }
+.subtype-btn .st-icon { font-size: 16px; }
+.field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+.field-grid .field.wide { grid-column: 1 / -1; }
+.field { margin-bottom: 7px; }
+.field-label { margin-bottom: 3px; font-size: 12px; }
+.input { padding: 9px 12px; }
+.save-btn { margin-top: 8px; padding: 12px; }
+.today-section { margin-top: 18px; }
+.todays-plan-strip { margin: 4px 0 6px; }
+/* Drink */
+.d-nav { margin-bottom: 10px; grid-template-columns: 40px minmax(0, 1fr) 40px 44px; }
+.period-nav { margin-bottom: 10px; }
+.period-label { padding: 7px 12px; white-space: nowrap; }
+.d-nav .period-label { padding: 7px 12px; }
+.drink-btn { padding: 9px 4px 7px; }
+.drink-num { padding: 6px 0; }
+.d-legend { margin-top: 8px; }
+.mbar { height: 72px; }
+.drink-btn { flex-direction: row; justify-content: center; align-items: baseline; gap: 6px; padding: 10px 4px; }
+.mcol { gap: 3px; }
+.mchart { padding-bottom: 0; }
 .w-hero { display: flex; align-items: baseline; gap: 12px; margin-top: 14px; }
 .w-wk { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.5px; color: #fff; }
 .w-wk small { font-size: 13px; letter-spacing: 1.5px; color: #9684b8; }
@@ -2652,7 +2692,7 @@ const RPE_LABEL = ["", "Very Easy", "Easy", "Moderate", "Moderate", "Hard", "Har
 const STORAGE_KEY = "hq:sessions";
 const SETTINGS_KEY = "hq:settings";
 const PLAN_KEY = "hq:plan";
-const APP_VERSION = "4.3";
+const APP_VERSION = "4.4";
 
 // Default weekly training plan (DOW 0=Sun … 6=Sat)
 const DEFAULT_PLAN = {
@@ -4011,15 +4051,15 @@ function setDrinkCount(k, n) {
 function renderDrinkView() {
   const d = daily.drinkDate, t = todayISO(), isToday = d === t;
   const dayCard = `<div class="dcard">
-    <div class="dcard-h"><span>LOG A DAY</span>${daily.drink[d] ? `<button class="link-btn" data-drink-clear="${d}">CLEAR</button>` : ""}</div>
-    <div class="period-nav">
+    <div class="period-nav d-nav">
       <button class="period-step" data-drink-day="-1">‹</button>
       <div class="period-label ${isToday ? "is-today" : ""}">${isToday ? `<span class="date-day-badge is-today">TODAY</span>` : ""}${fmtDay(d)}</div>
       <button class="period-step" data-drink-day="1" ${isToday ? "disabled" : ""}>›</button>
+      ${daily.drink[d] ? `<button class="link-btn" data-drink-clear="${d}">CLEAR</button>` : `<span></span>`}
     </div>
     ${renderDrinkButtons(d)}
   </div>`;
-  return dayCard + renderDryTrend() + renderDrinkCalendar() + renderDrinkMonths() + renderDrinkSettings();
+  return dayCard + renderDrinkCalendar() + renderDrinkMonths() + renderDrinkSettings();
 }
 function renderDryTrend() {
   const now = new Date(), mk = todayISO().slice(0, 7);
@@ -4091,7 +4131,6 @@ function renderDrinkCalendar() {
       <button class="period-step" data-cal-step="1" ${canNext ? "" : "disabled"}>›</button>
     </div>
     <div class="dc-grid">${html}</div>
-    <div class="d-legend">${["none", "light", "full"].map(k => `<span><i style="background:${DRINK_COLORS[k]}"></i>${DRINK_NAMES[k]}</span>`).join("")}</div>
   </div>`;
 }
 function renderDrinkMonths() {
@@ -4189,11 +4228,12 @@ function renderWeightView() {
     else if (Notification.permission === "default") perm = `<div class="ds-actions"><button class="ghost-btn" data-w-perm>🔔 ENABLE PHONE ALERTS</button></div>`;
     else perm = `<div class="w-hint">Phone alerts are blocked in Settings. You'll still get the banner.</div>`;
   }
-  const setCard = `<div class="dcard">
-    <div class="dcard-h"><span>MODE</span></div>
+  const setTitle = s.mode === "goal" ? "⚙ GOAL & MILESTONE" : s.mode === "maintain" ? "⚙ MAINTAIN SETTINGS" : "⚙ WEIGHT MODE";
+  const setCard = `<details class="dcard" id="wSettings" ${daily.wsOpen ? "open" : ""}>
+    <summary class="dcard-h"><span>${setTitle}</span><span class="r">▾</span></summary>
     <div class="range-toggle mode-toggle">${modes}</div>
     ${fields}${perm}
-  </div>`;
+  </details>`;
   return chartCard + entryCard + setCard;
 }
 
@@ -4284,7 +4324,7 @@ function attachDailyHandlers() {
   on("[data-ms-next]", "click", () => {
     const m = daily.wset.ms, cur = weightAvg(todayISO()); if (!m) return;
     Object.assign(m, { kg: null, date: null, hitDate: null, fromKg: cur ? round2(cur.avg) : m.kg, fromDate: todayISO() });
-    saveWeightSettings(); state.view = "weight"; render();
+    saveWeightSettings(); state.view = "weight"; daily.wsOpen = true; render();
     showToast("Enter the next milestone in settings below");
     setTimeout(() => document.querySelector('[data-ms-set="kg"]')?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
   });
@@ -4350,6 +4390,8 @@ function attachDailyHandlers() {
     daily.calY = d.getFullYear(); daily.calM = d.getMonth(); render();
   });
   on("[data-cal-jump]", "click", el => { const [y, m] = el.dataset.calJump.split("-").map(Number); daily.calY = y; daily.calM = m - 1; render(); });
+  const wsEl = document.getElementById("wSettings");
+  if (wsEl) wsEl.addEventListener("toggle", () => { daily.wsOpen = wsEl.open; });
   const dsEl = document.getElementById("drinkSettings");
   if (dsEl) dsEl.addEventListener("toggle", () => { daily.dsOpen = dsEl.open; });
   on("[data-ds-toggle]", "change", el => { daily.dset[el.dataset.dsToggle] = el.checked; saveDrinkSettings(); render(); });
@@ -5250,8 +5292,7 @@ function renderLog() {
         return `
           <button class="discipline-btn${active ? ' active' : ''}" data-discipline="${d}" role="tab" aria-selected="${active}"
             style="${disciplineBtnStyle(c.color, active)}">
-            <div class="icon">${c.icon}</div>
-            <div class="label">${d}</div>
+            <span class="icon">${c.icon}</span><span class="label">${d}</span>
           </button>
         `;
       }).join("")}
@@ -5275,14 +5316,15 @@ function renderLog() {
     ${renderTodaysPlan(state.date)}
     ${renderStepsRow(state.date)}
 
-    ${activeFields.map(f => {
+    <div class="field-grid">${(() => { const nums = activeFields.filter(f => f.type === "number"); const lastOdd = nums.length % 2 ? nums[nums.length - 1] : null; return activeFields.map(f => {
       const isNumber = f.type === "number";
       const allowsDecimal = isNumber && !!f.step;
       const actualType = isNumber ? "text" : f.type;
       const inputmode = isNumber ? (allowsDecimal ? "decimal" : "numeric") : "";
       const pattern = allowsDecimal ? `pattern="[0-9]*[.,]?[0-9]*"` : (isNumber ? `pattern="[0-9]*"` : "");
+      const wide = !isNumber || f === lastOdd;
       return `
-      <div class="field">
+      <div class="field${wide ? " wide" : ""}">
         <label class="field-label" for="field-${f.key}">${f.label.toUpperCase()}</label>
         <input id="field-${f.key}" class="input" type="${actualType}"
           ${inputmode ? `inputmode="${inputmode}"` : ""}
@@ -5294,7 +5336,7 @@ function renderLog() {
         ${renderComputedHint(f.key)}
       </div>
       `;
-    }).join("")}
+    }).join(""); })()}</div>
 
     <button class="save-btn ${state.saved ? "saved" : ""}" id="saveBtn"
       style="background:${state.saved ? "" : cfg.color};">
